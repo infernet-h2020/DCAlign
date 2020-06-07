@@ -1,6 +1,6 @@
-name = "DCAbuild"
-uuid = "3d9eb81f-a87c-440f-9527-1ec03c67051d"
-authors = ["Anna Paola Muntoni","Andrea Pagnani"]
+name = "DCAlign"
+uuid = "dd7f3fb5-83b0-49fa-89e7-80942359ccef"
+authors = ["Anna Paola Muntoni", "Andrea Pagnani"]
 version = "0.1.0"
 
 [deps]
