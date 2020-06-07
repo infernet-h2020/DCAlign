@@ -1,11 +1,11 @@
 module DCAlign
 using FastaIO
-using Printf, Random
+using Printf, Random, Logging, Distributed, DelimitedFiles
 using ExtractMacro, OffsetArrays
 export Seq, palign
+
 import Base.show
-using Distributed
-using DelimitedFiles
+
 
 include("types.jl")     # general types (all marginals and BP/MS msg)
 include("iterate_bplc.jl")   # BPlc algoritm at chosen temperature

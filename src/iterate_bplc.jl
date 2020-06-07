@@ -13,9 +13,9 @@ function update!(allvar::AllVar)
         if mod(it,nprint) == 0 && verbose
 	    @printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext, μint,ΔP,ΔB,ΔF)
          end
-         if maximum(max.(ΔP,ΔB,ΔF)) <= epsconv 
-            if verbose 
-	        @printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext,μint, ΔP,ΔB,ΔF)
+         if maximum(max.(ΔP,ΔB,ΔF)) <= epsconv
+            if verbose
+	        	@printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext,μint, ΔP,ΔB,ΔF)
             end
             return it, :converged, en
         end
@@ -128,12 +128,12 @@ function central!(central::Marginal,allvar::AllVar,i::Int)
 
     # case xᵢ = 1 (match)
     A0 = q
-    for nᵢ in 1:N
+    @inbounds for nᵢ in 1:N
         Anᵢ = intseq[nᵢ]
         expscra = h[Anᵢ,i]
         for j in 1:i-2
             Pj = P[j]
-            for nⱼ = 0:nᵢ-1 # light cone constraint nⱼ < nᵢ
+            @simd for nⱼ = 0:nᵢ-1 # light cone constraint nⱼ < nᵢ
                Anⱼ = nⱼ == 0 ? A0 : intseq[nⱼ]
                expscra += J[Anⱼ, Anᵢ, j, i] * Pj[1,nⱼ]
                expscra += J[A0, Anᵢ, j, i] * Pj[0,nⱼ]
@@ -141,7 +141,7 @@ function central!(central::Marginal,allvar::AllVar,i::Int)
         end
         for j in i+2:L
             Pj = P[j]
-            for nⱼ = nᵢ:N+1 # light cone constraint nⱼ > nᵢ
+            @simd for nⱼ = nᵢ:N+1 # light cone constraint nⱼ > nᵢ
                Anⱼ = nⱼ == N+1 ? A0 : intseq[nⱼ]
                expscra += nᵢ == nⱼ ? 0 : J[Anⱼ,Anᵢ,j,i] * Pj[1,nⱼ]
                expscra += J[A0, Anᵢ,j,i] * Pj[0,nⱼ]
@@ -150,11 +150,11 @@ function central!(central::Marginal,allvar::AllVar,i::Int)
         central[1, nᵢ] = expscra
     end
     # case xᵢ = 0 (gap)
-    for nᵢ in 0:N+1
+    @inbounds for nᵢ in 0:N+1
        expscra = 0.0
        for j in 1:i-2
           Pj = P[j]
-          for nⱼ in 0:nᵢ
+          @simd for nⱼ in 0:nᵢ
             Anⱼ = (nⱼ == 0 || nⱼ == N+1) ? A0 : intseq[nⱼ]
             expscra += J[Anⱼ,A0, j,i] * Pj[1,nⱼ]
             expscra += J[A0, A0, j,i] * Pj[0,nⱼ]
@@ -162,7 +162,7 @@ function central!(central::Marginal,allvar::AllVar,i::Int)
       end
       for j in i+2:L
          Pj = P[j]
-         for nⱼ in nᵢ:N+1
+         @simd for nⱼ in nᵢ:N+1
             Anⱼ = (nⱼ == 0 || nⱼ == N+1) ? A0 : intseq[nⱼ]
             expscra += nᵢ == nⱼ ? 0 : J[Anⱼ, A0, j, i] * Pj[1,nⱼ]
             expscra += J[A0, A0, j, i] * Pj[0,nⱼ]
@@ -170,19 +170,21 @@ function central!(central::Marginal,allvar::AllVar,i::Int)
       end
       central[0,nᵢ] = expscra
     end
-    for nᵢ in 0:N+1
-        if i == 1
-            central[0, nᵢ] = nᵢ == 0 ? central[0,nᵢ] -μext + h[A0,i] : -Inf
-        elseif i == L
-            central[0, nᵢ] = nᵢ == N+1 ? central[0,nᵢ] -μext + h[A0,i] : -Inf
-        else
-            central[0,nᵢ] = (nᵢ == 0 || nᵢ == N+1) ? central[0,nᵢ] -μext + h[A0,i] : central[0,nᵢ] -μint + h[A0,i]
-        end
-    end
+	@inbounds @simd for nᵢ = 0:N+1
+	    if i == 1
+	        central[0, nᵢ] = nᵢ == 0 ? central[0, nᵢ] - μext + h[A0, i] : -Inf
+	    elseif i == L
+	        central[0, nᵢ] = nᵢ == N + 1 ? central[0, nᵢ] - μext + h[A0, i] : -Inf
+	    else
+	        central[0, nᵢ] =
+	            (nᵢ == 0 || nᵢ == N + 1) ? central[0, nᵢ] - μext + h[A0, i] :
+	            central[0, nᵢ] - μint + h[A0, i]
+	    end
+	end
     #cannot match n = 0 pointer
     central[1,0] = -Inf
     central[1,N+1] = -Inf
-    for l in eachindex(central)
+    @inbounds @simd for l in eachindex(central)
         central[l] = exp(central[l])
     end
 end
@@ -197,10 +199,10 @@ function forward!(forward::Marginal,allvar::AllVar,i::Int)
 
     A0 = q
     # case xᵢ = 1 (match)
-    for nᵢ in 1:N
+    @inbounds for nᵢ in 1:N
         scra = 0.0
         Anᵢ = intseq[nᵢ]
-        for nᵢm in 0:nᵢ-1
+        @simd for nᵢm in 0:nᵢ-1
             Anᵢm = nᵢm == 0 ? A0 : intseq[nᵢm]
             Δn = nᵢ- nᵢm -1
             pen = (Δn > 0)*(nᵢm > 0)*(-λo[i] - λe[i]*(Δn - 1));
@@ -214,12 +216,12 @@ function forward!(forward::Marginal,allvar::AllVar,i::Int)
     forward[1,0] = 0.0
     forward[1,N+1] = 0.0
     # case xᵢ = 0 gap
-    for nᵢ in 0:N+1
+    @inbounds @simd for nᵢ in 0:N+1
        Anᵢ = (nᵢ == 0 || nᵢ == N+1) ? A0 : intseq[nᵢ]
        forward[0,nᵢ] = (nᵢ == 0 || nᵢ == N+1) ? 0.0 : fwdm1[1,nᵢ] * exp(J[Anᵢ,A0,i-1,i])
        forward[0,nᵢ] += fwdm1[0,nᵢ] * exp(J[A0, A0,i-1,i])
     end
-    for nᵢm = 1:N
+    @inbounds @simd for nᵢm = 1:N
         Anᵢm = intseq[nᵢm]
         forward[0,N+1] += fwdm1[1,nᵢm] * exp(J[Anᵢm,A0,i-1,i])
     end
@@ -236,13 +238,13 @@ function backward!(backward::Marginal,allvar::AllVar,i::Int)
 
     A0 = q
     # case xᵢ = 1 (match)
-    for nᵢ in 1:N
+    @inbounds for nᵢ in 1:N
         Anᵢ = intseq[nᵢ]
         # case xᵢp = 0 (gap)
         scra = bckp1[0,nᵢ] * exp(J[A0,Anᵢ,i+1,i])
         scra += bckp1[0,N+1] * exp(J[A0,Anᵢ,i+1,i])
         # case xᵢp = 1 (match)
-        for nᵢp in nᵢ+1:N
+        @simd for nᵢp in nᵢ+1:N
             Anᵢp = intseq[nᵢp]
             Δn = nᵢp - nᵢ - 1
             pen = (Δn > 0)*(-λo[i+1] - λe[i+1]*(Δn - 1))
@@ -251,11 +253,11 @@ function backward!(backward::Marginal,allvar::AllVar,i::Int)
         backward[1,nᵢ] = scra
     end
     # case xᵢ = 0 (gap)
-    for nᵢ in 0:N+1
+    @inbounds for nᵢ in 0:N+1
         # case xᵢp = 0 (gap)
         scra = bckp1[0,nᵢ] * exp(J[A0, A0,i+1,i])
         # case xᵢp = 1 (match)
-        for nᵢp in nᵢ+1:N
+        @simd for nᵢp in nᵢ+1:N
             Anᵢp = intseq[nᵢp]
             Δn = nᵢp - nᵢ- 1
             pen = (Δn > 0)*(nᵢ > 0)*(-λo[i+1] -λe[i+1]*(Δn - 1))
@@ -280,7 +282,7 @@ function compute_en(allvar::AllVar)
     match = zeros(Int,L)
     n = zeros(Int,L)
     hpart = 0.0
-    for i in 1:L
+    @inbounds for i in 1:L
         H = P[i]
         ai = argmax(H)
         match[i] = ai[1]; n[i] = ai[2]
@@ -296,17 +298,17 @@ function compute_en(allvar::AllVar)
     end
     Jpart = 0.0
 
-    for i in 1:L
+    @inbounds for i in 1:L
         ni = n[i]
         Ai = match[i] == 1 ? intseq[ni] : q
-        for j in i+1:L
+        @simd for j in i+1:L
             nj = n[j]
             Aj = match[j] == 1 ? intseq[nj] : q
             Jpart += -J[Ai,Aj,i,j]
             en += -J[Ai,Aj,i,j]
         end
     end
-    for i in 1:L-1
+    @inbounds for i in 1:L-1
         ni = n[i]
         Ai = match[i] == 1 ? intseq[ni] : q
         if match[i+1] == 1
@@ -318,5 +320,4 @@ function compute_en(allvar::AllVar)
     end
     #println("Jpart ", Jpart, " hpart ", hpart)
     return en
-
 end

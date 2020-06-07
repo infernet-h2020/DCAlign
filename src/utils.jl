@@ -35,7 +35,8 @@ function check_assignment(P,verbose,N)
 	if maxP == -Inf
 	   println("Problem with node $i")
 	end
-	n =idxn; x =idxx
+	n =idxn
+	x =idxx
         maxP = -Inf
         idxn = []
         idxx = []
@@ -46,7 +47,8 @@ function check_assignment(P,verbose,N)
 	       idxn = nj
 	    end
 	 end
-	 nj =idxn; xj =idxx
+	 nj = idxn
+	 xj = idxx
 	 sat = x == 1 ? (n > nj) : (n == nj || n == N+1)
         if sat == false && verbose == true
 	   println("- $i → ($x, $n) $i-1 → ($xj, $nj)")
@@ -76,7 +78,7 @@ end
 aminoalphabet = Dict{String,Int64}()
 nbasealphabet = Dict{String,Int64}()
 aminoalphabet = Dict('A'=> 1, 'B'=> 21, 'C' =>2, 'D'=> 3, 'E'=> 4, 'F'=> 5, 'G'=> 6, 'H'=> 7, 'I'=> 8, 'J'=> 21,'K'=> 9, 'L'=> 10, 'M'=> 11, 'N'=>12, 'O'=>21, 'P'=> 13, 'Q'=>14, 'R'=>15, 'S'=>16, 'T'=>17, 'U'=>21, 'V'=>18,'W'=>19, 'X'=>21, 'Y'=>20, 'Z'=> 21, '-'=> 21)
-nbasealphabet = Dict( 'A'=> 1, 'U'=> 2, 'C'=> 3, 'G'=> 4, '-'=> 5 ,'T'=> 2, 'N'=> 5, 'R'=> 5, 'X' => 5, 'V'=> 5, 'H'=>5, 'D'=>5, 'B'=>5, 'M'=>5, 'W'=>5, 'S'=>5, 'Y'=>5, 'K'=>5)
+nbasealphabet = Dict('A'=> 1, 'U'=> 2, 'C'=> 3, 'G'=> 4, '-'=> 5 ,'T'=> 2, 'N'=> 5, 'R'=> 5, 'X' => 5, 'V'=> 5, 'H'=>5, 'D'=>5, 'B'=>5, 'M'=>5, 'W'=>5, 'S'=>5, 'Y'=>5, 'K'=>5)
 
 function letter2num(c::Union{Char,UInt8}, ctype::Symbol)
     if ctype == :amino
@@ -170,7 +172,9 @@ end
 function count_gaps_ins(v::String)
 
     N = length(v)
-    Ng = 0; Ni = 0; Nb = 0;
+    Ng = 0
+	Ni = 0
+	Nb = 0
     types = zeros(N)
     for i = 1:N
         if isuppercase(v[i])
@@ -184,7 +188,7 @@ function count_gaps_ins(v::String)
         end
     end
     for i = 1:N-1
-        if v[i] =='-' 
+        if v[i] =='-'
             Ng += 1
         elseif islowercase(v[i])
             Ni += 1
@@ -205,89 +209,97 @@ end
 
 function hammingdist(seqaux, seqtrue)
     length(seqaux) == length(seqtrue) || error("seqs of different lengths")
-    ctr = 0; moreg = 0; lessg = 0; diffm = 0;  
+    ctr = 0
+	moreg = 0
+	lessg = 0
+	diffm = 0
     for i in eachindex(seqaux)
         if seqaux[i] !== seqtrue[i]
             ctr += 1
         end
     	if seqaux[i] == '-' && seqtrue[i] != '-'
-	    #display(["mg" seqaux[i] seqtrue[i]])
-	    moreg += 1
-	end
-	if seqaux[i] != '-' && seqtrue[i] == '-'
+	    	moreg += 1
+		end
+		if seqaux[i] != '-' && seqtrue[i] == '-'
 	    #display(["lg" seqaux[i] seqtrue[i]])
-	    lessg += 1
-	end
-	if seqaux[i] != '-' && seqtrue[i] != '-' && seqaux[i] != seqtrue[i]
-	    #display(["dm" seqaux[i] seqtrue[i]])
-	    diffm +=1
-	end
+	    	lessg += 1
+		end
+		if seqaux[i] != '-' && seqtrue[i] != '-' && seqaux[i] != seqtrue[i]
+	    	diffm +=1
+		end
     end
-		
     return ctr, moreg, lessg, diffm
 end
 
-function read_parameters(filename::String, q::Int, L::Int;
-			 gap::Int = 0,
-			 typel::Symbol = :bm)
+function read_parameters(
+    filename::String,
+    q::Int,
+    L::Int;
+    gap::Int = 0,
+    typel::Symbol = :bm,
+)
 
     if typel == :plm
-      println("Assuming J a b i j and h a i format");
+        @info "Assuming J a b i j and h a i format"
     else
-      println("Assuming J i j a b and h i a format")
+        @info "Assuming J i j a b and h i a format"
     end
-    println("Output tersors: J[a b i j] and h[a i]");
-    println("Gap in input file ", gap, " now in ", q);
-    J = zeros(q,q,L,L);
-    h = zeros(q,L);
+    @info "Output tersors: J[a b i j] and h[a i]"
+    @info "Gap in input file $gap now in $q"
+    J = zeros(q, q, L, L)
+    h = zeros(q, L)
 
     if gap == q
-       offset = 0
+        offset = 0
     else
-       offset = 1
+        offset = 1
     end
     open(filename) do file
-	for ln in eachline(file)
-	    line = split(ln, ' ')
-	    if occursin('J', ln)
+        for ln in eachline(file)
+            line = split(ln, ' ')
+            if occursin('J', ln)
                 if typel == :bm
-		  i = parse(Int64, line[2])+offset;
-		  j = parse(Int64, line[3])+offset;
-	 	  a = gap == q ? parse(Int64, line[4]) + offset : parse(Int64, line[4]);
-		  b = gap == q ? parse(Int64, line[5]) + offset : parse(Int64, line[5]);
-	       else
-		  i = parse(Int64, line[4])+offset;
-		  j = parse(Int64, line[5])+offset;
-	 	  a = gap == q ? parse(Int64, line[2]) + offset : parse(Int64, line[2]);
-		  b = gap == q ? parse(Int64, line[3]) + offset : parse(Int64, line[3]);
-               end
-               if a == gap && gap == 0
-		    a = q
-		end
-		if b == gap && gap == 0
-		    b = q
-		end
-		J[a, b, i, j] = parse(Float64, line[6])
-		J[b, a, j, i] = parse(Float64, line[6])
-	    end
-	    if occursin('h',ln)
-                if typel == :bm
-		  i = parse(Int64, line[2])+offset
-		  a = gap == q ? parse(Int64, line[3]) + offset : parse(Int64, line[3])
+                    i = parse(Int64, line[2]) + offset
+                    j = parse(Int64, line[3]) + offset
+                    a = gap == q ? parse(Int64, line[4]) + offset :
+                        parse(Int64, line[4])
+                    b = gap == q ? parse(Int64, line[5]) + offset :
+                        parse(Int64, line[5])
                 else
-		  i = parse(Int64, line[3])+offset
-		  a = gap == q ? parse(Int64, line[2]) + offset : parse(Int64, line[2])
+                    i = parse(Int64, line[4]) + offset
+                    j = parse(Int64, line[5]) + offset
+                    a = gap == q ? parse(Int64, line[2]) + offset :
+                        parse(Int64, line[2])
+                    b = gap == q ? parse(Int64, line[3]) + offset :
+                        parse(Int64, line[3])
                 end
-		if a == gap && gap == 0
-		    a = q
-		end
-		h[a, i] = parse(Float64, line[4])
-	    end
-	end
+                if a == gap && gap == 0
+                    a = q
+                end
+                if b == gap && gap == 0
+                    b = q
+                end
+                J[a, b, i, j] = parse(Float64, line[6])
+                J[b, a, j, i] = parse(Float64, line[6])
+            end
+            if occursin('h', ln)
+                if typel == :bm
+                    i = parse(Int64, line[2]) + offset
+                    a = gap == q ? parse(Int64, line[3]) + offset :
+                        parse(Int64, line[3])
+                else
+                    i = parse(Int64, line[3]) + offset
+                    a = gap == q ? parse(Int64, line[2]) + offset :
+                        parse(Int64, line[2])
+                end
+                if a == gap && gap == 0
+                    a = q
+                end
+                h[a, i] = parse(Float64, line[4])
+            end
+        end
     end
-
     return J, h
-
 end
 
 function decodeposterior(P,strseq)
@@ -309,7 +321,8 @@ function decodeposterior(P,strseq)
 	if maxP == -Inf
 	   println("Problem with $i")
 	end
-	n = idxn; x = idxx
+	n = idxn
+	x = idxx
 	if x == 0
 	    pa *= '-'
         else
@@ -319,7 +332,9 @@ function decodeposterior(P,strseq)
     po = ""
     i = 1
     start = false
-    nold = 0; f = 0; l = 0;
+    nold = 0
+	f = 0
+	l = 0
     while i <= L
         maxP = -Inf
 	idxx = []
@@ -331,7 +346,8 @@ function decodeposterior(P,strseq)
 	      idxn = n
 	   end
 	end
-        n = idxn; x = idxx;
+        n = idxn
+		x = idxx
         if x == 1 && start == true
             delta = n - nold - 1
             if delta > 0
