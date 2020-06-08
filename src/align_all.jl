@@ -142,7 +142,7 @@ function align_all(
         seqpo0 = out.po
         sat = check_assignment(P, false, N)
         if sat == false
-            (seqpa0, P) = decimate_post(res[3], T0, idx0 = 1)
+            (seqpa0, P) = decimate_post(res[3], T0)
             out = decodeposterior(P, seq.strseq)
             seqpo0 = out.po
         end
@@ -200,7 +200,7 @@ function align_all(
         seqpo = out.po
         sat = check_assignment(P, false, N)
         if sat == false
-            (seqpa, P) = decimate_post(res[3], T0, idx0 = 1)
+            (seqpa, P) = decimate_post(res[3], T0)
             out = decodeposterior(P, seq.strseq)
             seqpo = out.po
         end
