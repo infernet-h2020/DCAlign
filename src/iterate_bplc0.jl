@@ -64,7 +64,7 @@ function onesweepT0!(allvar::AllVar)
     @extract alg : damp
 
     v = randperm(L)
-    for idx in 1:L # i-th marginal 1 ≤ i ≤ L
+    @inbounds for idx in 1:L # i-th marginal 1 ≤ i ≤ L
         i = v[idx]
         newPBFiT0!(allvar, i::Int)
         p,f,b = P[i], F[i], B[i]
@@ -129,108 +129,83 @@ function newPBFiT0!(allvar::AllVar, i::Int)
     end
 end
 
-function centralT0!(central::Marginal,allvar::AllVar,i::Int)
-    @extract allvar : pbf jh seq alg
-    @extract pbf : N P L q
-    @extract jh : J h 
-    @extract seq : intseq
-    @extract alg : μext μint
+# function myargmax(Pj,nbeg,nend)
+#     #argm = -Inf
+#     val = (-1,-1,-Inf)
+#     @inbounds for n = nbeg:nend
+#         for x = 0:1
+#             val = ifelse(Pj[x, n]>val[3],(x,n,Pj[x,n]),val)
+#         end
+#     end
+#     @assert val[1] > -1
+#     @assert val[2] > -1
+#     return val[1],val[2]
+# end
+
+
+function myargmax(Pj,nbeg,nend)
+    argm = -Inf
+    xj = -1
+    nj = -1
+    @inbounds for n = nbeg:nend
+        for x = 0:1
+            if Pj[x, n] > argm
+                argm = Pj[x, n]
+                xj = x
+                nj = n
+            end
+        end
+    end
+    @assert(xj > -1)
+    @assert(nj > -1)
+    return xj,nj
+end
+
+
+function centralT0!(central::Marginal, allvar::AllVar, i::Int)
+    @extract allvar:pbf jh seq alg
+    @extract pbf:N P L q
+    @extract jh:J h
+    @extract seq:intseq
+    @extract alg:μext μint
 
     A0 = q
     # case xᵢ = 1 (match)
-    for ni in 1:N
+    @inbounds for ni = 1:N
         Ani = intseq[ni]
-        scra = h[Ani,i]
-        for j in 1:i-2
-            Pj = P[j]
-            #aux = argmax(Pj[:,0:ni-1])
-            #xj = aux[1]
-            #nj = aux[2]
-            argm = -Inf
-            xj = -1
-            nj = -1
-            for x in 0:1, n in 0:ni-1
-                if Pj[x,n] > argm
-                    argm = Pj[x,n]
-                    xj = x
-                    nj = n
-                end
-            end
-            @assert(xj > -1)
-            @assert(nj > -1)
+        scra = h[Ani, i]
+        for j = 1:i-2
+            xj, nj = myargmax(P[j], 0, ni - 1)
             Anj = (nj == 0 || xj == 0) ? A0 : intseq[nj]
             scra += J[Ani, Anj, i, j]
         end
-        for j in i+2:L
-            Pj = P[j]
-            #aux = argmax(Pj[:,ni+1:N+1])
-            #xj = aux[1]
-            #nj = aux[2]
-            argm = -Inf
-            xj = -1
-            nj = -1
-            for x in 0:1, n in ni+1:N+1
-                if Pj[x,n] > argm
-                    argm = Pj[x,n]
-                    xj = x
-                    nj = n
-                end
-            end
-            @assert(xj > -1)
-            @assert(nj > -1)
+        for j = i+2:L
+            xj, nj = myargmax(P[j], ni + 1, N + 1)
             Anj = (xj == 0 || nj == N + 1) ? A0 : intseq[nj]
-            scra += J[Ani, Anj,i,j]
+            scra += J[Ani, Anj, i, j]
         end
         central[1, ni] = scra
     end
     # case xᵢ = 0 (gap)
-    for ni in 0:N+1
+    @inbounds for ni = 0:N+1
         scra = 0
         Ani = A0
-        for j in 1:i-2
-            Pj = P[j]
-            #aux = argmax(Pj[:,0:ni])
-            #xj = aux[1]
-            #nj = aux[2]
-            argm = -Inf
-            xj = -1
-            nj = -1
-            for x in 0:1, n in 0:ni
-                if Pj[x,n] > argm
-                    argm = Pj[x,n]
-                    xj = x
-                    nj = n
-                end
-            end
-            @assert(xj > -1)
-            @assert(nj > -1)
+        for j = 1:i-2
+            xj, nj = myargmax(P[j], 0, ni)
             Anj = (nj == 0 || nj == N + 1 || xj == 0) ? A0 : intseq[nj]
-            scra += J[Ani,Anj,i,j]
+            scra += J[Ani, Anj, i, j]
         end
-        for j in i+2:L
-            Pj = P[j]
-            #aux = argmax(Pj[:,ni:N+1])
-            #xj = aux[1]
-            #nj = aux[2]
-            argm = -Inf
-            xj = -1
-            nj = -1
-            for x in 0:1, n in ni:N+1
-                if Pj[x,n] > argm
-                    argm = Pj[x,n]
-                    xj = x
-                    nj = n
-                end
-            end
-            @assert(xj > -1)
-            @assert(nj > -1)
+        for j = i+2:L
+            xj, nj = myargmax(P[j], ni, N + 1)
             Anj = (nj == 0 || nj == N + 1 || xj == 0) ? A0 : intseq[nj]
             scra += J[Ani, Anj, i, j]
         end
         central[0, ni] = scra
     end
-    for ni in 0:N+1
-            central[0,ni] = (ni == 0 || ni == N+1) ? central[0,ni] -μext + h[A0,i] : central[0,ni] -μint + h[A0,i]
+    @inbounds for ni = 0:N+1
+        central[0, ni] =
+            (ni == 0 || ni == N + 1) ? central[0, ni] - μext + h[A0, i] :
+            central[0, ni] - μint + h[A0, i]
     end
     #cannot match n = 0 pointer
     #central[1,0] = -Inf
@@ -247,30 +222,30 @@ function forwardT0!(forward::Marginal,allvar::AllVar,i::Int)
     fwdm1 = F[i-1]
     A0 = q
     # case xᵢ = 1 (match)
-    for ni in 1:N
+    @inbounds for ni in 1:N
         Ani = intseq[ni]
         scra = -Inf
-        for nim in 0:ni-1
+        @simd for nim in 0:ni-1
            Anim = nim == 0 ? A0 : intseq[nim]
            Δn = ni - nim - 1
            pen = (Δn > 0)*(nim > 0)*(- λo[i] - λe[i]*(Δn - 1))
-           scra = maximum([scra fwdm1[0,nim] + J[Ani, A0, i, i-1] + pen])
-           scra = maximum([scra fwdm1[1,nim] + J[Ani, Anim, i,i-1] + pen])
+           scra = max(scra, fwdm1[0,nim] + J[Ani, A0,   i, i-1] + pen)
+           scra = max(scra, fwdm1[1,nim] + J[Ani, Anim, i, i-1] + pen)
         end
         forward[1, ni] = scra
     end
     # case xᵢ = 0 gap
-    for ni in 1:N
+    @inbounds @simd for ni in 1:N
         Ani = intseq[ni]
-        forward[0,ni] = maximum([fwdm1[1,ni] + J[A0,Ani,i,i-1]  fwdm1[0,ni] + J[A0,A0,i,i-1]])
+        forward[0,ni] = max(fwdm1[1,ni]+J[A0,Ani,i,i-1],fwdm1[0,ni]+J[A0,A0,i,i-1])
     end
     forward[0,0] = fwdm1[0,0] + J[A0,A0,i,i-1]
     scra = -Inf
-    for nim = 1:N
+    @inbounds @simd for nim = 1:N
         Anim = intseq[nim]
-        scra = maximum([scra fwdm1[1,nim] + J[A0,Anim,i,i-1]])
+        scra = max(scra, fwdm1[1,nim] + J[A0,Anim,i,i-1])
     end
-    forward[0,N+1] = maximum([scra fwdm1[0,N+1] + J[A0,A0,i,i-1]]) 
+    forward[0,N+1] = max(scra, fwdm1[0,N+1] + J[A0,A0,i,i-1])
 end
 
 function backwardT0!(backward::Marginal,allvar::AllVar,i::Int)
@@ -284,27 +259,27 @@ function backwardT0!(backward::Marginal,allvar::AllVar,i::Int)
     A0 = q
 
     # case xᵢ = 1 (match)
-    for ni in 1:N
+    @inbounds for ni in 1:N
         # case xᵢp = 0 (gap)
         Ani = intseq[ni]
         scra = bckp1[0,ni] + J[A0,Ani,i+1,i]
-        scra = maximum([scra bckp1[0,N+1] + J[A0,Ani,i+1,i]])
+        scra = max(scra, bckp1[0,N+1] + J[A0,Ani,i+1,i])
         for nip in ni+1:N
             Anip = intseq[nip]
             Δn = nip - ni- 1
-	    pen = (Δn > 0)*(- λo[i+1] - λe[i+1]*(Δn - 1))
-            scra = maximum([scra bckp1[1,nip] + J[Anip, Ani, i+1,i] + pen])
+	        pen = (Δn > 0)*(- λo[i+1] - λe[i+1]*(Δn - 1))
+            scra = max(scra, bckp1[1,nip] + J[Anip, Ani, i+1,i] + pen)
         end
         backward[1,ni] = scra
     end
     # case xᵢ = 0 (gap)
-    for ni in 0:N+1
+    @inbounds for ni in 0:N+1
         scra = bckp1[0,ni] + J[A0,A0,i+1,i]
         for nip in ni+1:N
             Anip = intseq[nip]
             Δn = nip - ni - 1
-	    pen = (ni > 0)*(Δn > 0)*(-λo[i+1] - λe[i+1]*(Δn - 1))
-            scra = maximum([scra bckp1[1,nip] + J[Anip,A0,i+1,i] + pen])
+	        pen = (ni > 0)*(Δn > 0)*(-λo[i+1] - λe[i+1]*(Δn - 1))
+            scra = max(scra, bckp1[1,nip], J[Anip,A0,i+1,i] + pen)
         end
         backward[0,ni] = scra
     end
@@ -317,7 +292,7 @@ function assignment!(allvar::AllVar, ndec::Int, assign::Matrix{Int})
     @extract allvar : pbf
     @extract pbf : L N P
     count = 0
-    for i in 1:L
+    @inbounds for i in 1:L
         Pi = P[i]
         #v, idx = findmax(Pi)
         new_a = argmax(Pi)
@@ -338,4 +313,3 @@ function assignment!(allvar::AllVar, ndec::Int, assign::Matrix{Int})
 
     return ndec, assign
 end
-

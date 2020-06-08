@@ -4,3 +4,4 @@
 test/*~
 src/*~
 notebook/.ipynb_checkpoints/
+src/script.jl
