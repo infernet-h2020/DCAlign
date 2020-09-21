@@ -1,4 +1,4 @@
-function print_results(fileflag, seqpa, seqpo, J, H, L, ctype, lambda_o, lambda_e, μext, μint, seqtest, seqins, init, fin, start, fname, satmf, beta, T0)
+function print_results(fileflag, seqpa, seqpo, J, H, L, ctype, lambda_o, lambda_e, μext, μint, seqtest, seqins, init, fin, start, fname, satmf, beta, T0, el_time)
 
 	enmf = compute_potts_en(J, H, seqpa, L,ctype)
 	enhmm = compute_potts_en(J,H, seqtest, L ,ctype)
@@ -7,7 +7,7 @@ function print_results(fileflag, seqpa, seqpo, J, H, L, ctype, lambda_o, lambda_
 	distmf, mgmf, lgmf, dmmf = hammingdist(seqpa, seqtest)
 
 	@printf(fileflag, ">%s/%d-%d\t", fname, init + parse(Int64, start) - 1, fin + parse(Int64, start) - 1)
-	@printf(fileflag, "sat: %s beta: %.2f muext: %.1f muint: %.1f T0: %s Dist: %d %d %d %d\n", satmf, beta, μext, μint, T0, distmf,mgmf,lgmf,dmmf)
+	@printf(fileflag, "sat: %s beta: %.2f muext: %.1f muint: %.1f T0: %s Dist: %d %d %d %d Time: %.2f\n", satmf, beta, μext, μint, T0, distmf,mgmf,lgmf,dmmf,el_time)
 	@printf(fileflag, "test     %s %.3f %.3f\n", seqtest, enhmm, costhmm)
 	@printf(fileflag, "dcalign  %s %.3f %.3f\n", seqpa, enmf, costmf)
 	@printf(fileflag, "ins test     %s\n", seqins)
@@ -118,6 +118,7 @@ function align_all(
 
         N = length(fullseq)
         T0 = true
+        stime = time()
         res = palign(
             seq,
             β .* J,
@@ -136,6 +137,7 @@ function align_all(
             epsconv = epsconv,
             verbose = verbose,
         )
+        el_time = time() -stime
         P = res[3].pbf.P
         out = decodeposterior(P, seq.strseq)
         seqpa0 = out.pa
@@ -172,10 +174,12 @@ function align_all(
                 sat,
                 β,
                 T0,
+                el_time,
             )
         end
 
         T0 = false
+        stime = time()
         res = palign(
             seq,
             β .* J,
@@ -194,6 +198,7 @@ function align_all(
             epsconv = epsconv,
             verbose = verbose,
         )
+        el_time = time() - stime
         P = res[3].pbf.P
         out = decodeposterior(P, seq.strseq)
         seqpa = out.pa
@@ -252,6 +257,7 @@ function align_all(
                 sat,
                 β,
                 T0,
+                el_time,
             )
         end
 
