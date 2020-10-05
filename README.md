@@ -38,11 +38,10 @@ A step-by-step description of the alignment procedure of a single sequence is pr
 
 + `q` : the length of the alphabet. The package assumes that for protein sequences we set ```q = 21``` while for RNA sequences ```q = 5```; <br>
 + `L` : the number of sites (i.e. the length of the aligned sequences) of the desired multiple sequence alignment; <br>
-+ `filename_par`: name of the file where the DCA parameters are stored. By default, the package assumes that they are written using the syntax of [bmDCA](https://github.com/matteofigliuzzi/bmDCA) and [adabmDCA](https://github.com/anna-pa-m/adabmDCA) output:
-
- > ```J i j a b```               _for_ i ∈ \[0,...,L-1\], j ∈ \[i+1,...,L-1\], a ∈ \[0,...,q-1\] _and_ b ∈ \[0,...,q-1\] <br>
- > ```h i a ```                   _for_ i ∈ \[0,...,L-1\] _and_ a ∈ \[0,..., q-1\] <br> 
-
++ `filename_par`: name of the file where the DCA parameters are stored. By default, the package assumes that they are written using the syntax of [bmDCA](https://github.com/matteofigliuzzi/bmDCA) and [adabmDCA](https://github.com/anna-pa-m/adabmDCA) output: <br>
+  ```J i j a b``` <br> 
+  ```h i a ``` <br>
+  where _i_ and _j_ run over the columns of the MSA while _a_ and _b_ run over the symbol (`-` translates in `0`).
 + `filename_full` : name of the file containing the unaligned sequences (in FASTA format)
 + `inspen_file`: name of the file where the insertion penalties are stored. The script assumes to be written as a two-columns file of length L
 + `μext` : penalty associated with "external" gaps;
@@ -56,10 +55,10 @@ It is possible to align a portion of the unaligned sequence, cut around the hit 
 
 If the DCA parameters are learned using [PlmDCA](https://github.com/pagnani/PlmDCA), one assumes that the format is <br>
 
-> ```J a b i j ```              _for_ i ∈ \[1,...,L\], j ∈ \[i+1,...,L\], a ∈ \[1,...,q\] _and_ b ∈ \[1,...,q\] <br>
-> ```h a i```                   _for_ i ∈ \[1,...,L\] _and_ a ∈ \[1,..., q\] <br> 
+ ```J a b i j ```              
+ ```h a i```                    
 
-and the gap symbol translates to _q_. To use and properly read them in the alignment process it suffices to set `typel = :plm`. Note that the output parameters of [DCAbuild](https://github.com/anna-pa-m/DCAbuild) are written using this syntax.
+and the gap symbol translates to `q`. To use and properly read them in the alignment process it suffices to set `typel = :plm`. Note that the output parameters of [DCAbuild](https://github.com/anna-pa-m/DCAbuild) are written using this syntax.
 
 ### Algorithm parameters
 It is possible to set the value of the (inverse) temperature used for the global Hamiltonian through the parameter `β`. Regarding the convergence criterium, it is possible to set: 
@@ -96,11 +95,13 @@ We have aligned a domain within the protein `E7EVI1_HUMAN` belonging to the PF00
 - `Dist`: site-by-site comparison between the `test` and the `dcalign` sequence. The four numbers denote the Hamming distance, Gap + (i.e. how many times `dcalign` puts a `-` when `test` has a residue), Gap - (i.e. how many times `dcalign` puts a residue when `test` puts a `-`) and Mismatches (i.e. how many times both `dcalign` and `test` decide not to put a `-` but they choose different residues for the same column).
 - `Time` : running time for `DCAlign`, in seconds.
 
-The rows `test` and `dcalign` contain the aligned sequence and its energy according to the DCA model and the complete model including the gap and insertion penalties. The lines that start with `ins` report the aligned sequences complete of the insertions as lower case symbols.
+The rows `test` and `dcalign` contain the aligned sequence and its energy according to the DCA model and the complete model including the gap and insertion penalties. The lines starting with `ins` report the aligned sequences complete of the insertions as lower case symbols.
 
 
+## Examples
 
-
+- full length sequences alone
+- alignment with comparison
 
 
 
