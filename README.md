@@ -12,7 +12,8 @@ This package contains the implementation of `DCAlign`, a tool for aligning biolo
 - a set of penalties for opening and extending insertions; they can be site-dependent;
 - a penalty for adding a gap at the beginning or at the end of the aligned sequence ("external") and one for inserting a gap between two symbols ("internal").
 
-We provide in the `test` folder, the parameters of the DCA models, the gap/insertion penalties used to align the [Pfam](https://pfam.xfam.org/) and [Rfam](https://rfam.xfam.org/) families PF00035, PF00677, PF00684, PF00763, RF00059, RF00162, RF00167, RF01734 whose performances are described in [arXiv:2005.08500](https://arxiv.org/abs/2005.08500). For an arbitrary seed, we provide the sub-module [DCAbuild](https://github.com/anna-pa-m/DCAbuild) which performs the learning of all the necessary parameters (see [DCAbuild](https://github.com/anna-pa-m/DCAbuild) page for the documentation).
+We provide in the `test` folder, the parameters of the DCA models, the gap/insertion penalties used to align the [Pfam](https://pfam.xfam.org/) and [Rfam](https://rfam.xfam.org/) families PF00035, PF00677, PF00684, PF00763, RF00059, RF00162, RF00167, RF01734 whose performances are described in [arXiv:2005.08500](https://arxiv.org/abs/2005.08500). We also add a set of synthetic sequences analyzed in the same work.
+For an arbitrary seed, we provide the sub-module [DCAbuild](https://github.com/anna-pa-m/DCAbuild) which performs the learning of all the necessary parameters (see [DCAbuild](https://github.com/anna-pa-m/DCAbuild) page for the documentation).
 
 The code is written in [Julia](https://julialang.org/).
 
@@ -39,8 +40,8 @@ A step-by-step description of the alignment procedure of a single sequence is pr
 + `q` : the length of the alphabet. The package assumes that for protein sequences we set ```q = 21``` while for RNA sequences ```q = 5```; <br>
 + `L` : the number of sites (i.e. the length of the aligned sequences) of the desired multiple sequence alignment; <br>
 + `filename_par`: name of the file where the DCA parameters are stored. By default, the package assumes that they are written using the syntax of [bmDCA](https://github.com/matteofigliuzzi/bmDCA) and [adabmDCA](https://github.com/anna-pa-m/adabmDCA) output: <br>
-  ```J i j a b``` <br> 
-  ```h i a ``` <br>
+  ```J i j a b value``` <br> 
+  ```h i a value``` <br>
   where _i_ and _j_ run over the columns of the MSA while _a_ and _b_ run over the symbol (`-` translates in `0`).
 + `filename_full` : name of the file containing the unaligned sequences (in FASTA format)
 + `inspen_file`: name of the file where the insertion penalties are stored. The script assumes to be written as a two-columns file of length L
@@ -55,8 +56,8 @@ It is possible to align a portion of the unaligned sequence, cut around the hit 
 
 If the DCA parameters are learned using [PlmDCA](https://github.com/pagnani/PlmDCA), one assumes that the format is <br>
 
- ```J a b i j ```              
- ```h a i```                    
+ ```J a b i j value```              
+ ```h a i value```                    
 
 and the gap symbol translates to `q`. To use and properly read them in the alignment process it suffices to set `typel = :plm`. Note that the output parameters of [DCAbuild](https://github.com/anna-pa-m/DCAbuild) are written using this syntax.
 
@@ -65,12 +66,12 @@ It is possible to set the value of the (inverse) temperature used for the global
 - `epsconv` : the minimum error, between the marginal probabilities of two consecutive iterations, required to stop the algorithm (for `β < ∞`); default: 1e-5
 - `mindec` : the minimum number of consecutive iterations in which the assigned variables do not change (for `β = ∞`); default: 50
 
-Furthermore, it is possible to modify the maximum number of iterations of DCAlign using `maxiter`.
+Furthermore, it is possible to modify the maximum number of iterations of DCAlign using `maxiter` and to print the output of `DCAlign` iterations using `verbose = true`.
 
 ## Ouput files
 As default, `DCAlign` produces a file in FASTA format containing the best aligned sequence between the output of the `β < ∞` and `β = ∞` versions of the algorithm. It is possible to modify the file name using `filename_out`. <br>
 
-When a comparison to a given MSA is performed, `DCAlign` produces an additional output file containing several information about the aligned sequences. For sake of simplicity, we report here an example:
+When a comparison to a given MSA is performed, `DCAlign` produces an additional output file containing several information about the aligned sequences. The default name can be changed using `filename_flag`. For sake of simplicity, we report here an example:
 
 ```
 >E7EVI1_HUMAN/188-252	sat: true beta: 1.00 muext: 2.5 muint: 0.0 T0: true Dist: 9 2 3 4 Time: 8.61 
@@ -99,10 +100,21 @@ The rows `test` and `dcalign` contain the aligned sequence and its energy accord
 
 
 ## Examples
+Let us align the set of full-length sequences for the RF00162 family in `test/RF00162` using `align_all`. We would like to rename the output file containing the MSA as `RF00162.ali` and have information about the iterations of `DCAlign`. To do that, one needs to run:
 
-- full length sequences alone
-- alignment with comparison
+```
+DCAlign.align_all(5, 108, "../test/RF00162/Parameters_bm_RF00162seed_potts.dat", "../test/RF00162/Test_RF00162.full",
+                          "../test/RF00162/Lambda_RF00162.dat", 3.5, 3.0, filename_out = "../test/RF00162/RF00162.ali", verbose = true)
+```
 
+Let us now align the test sequences for the Pfam famility PF00677 of the `test/PF00677` folder and let us compare them to the HMMer outcomes provided in the same folder. We also would like to add `10` amino-acids before and after the hits already selected by HMMer and to rename the output files, the alignment and the comparison files, as `PF00677.ali` and `PF00677.out`. In this case we should run:
 
+```
+DCAlign.align_all(21, 87, "../test/PF00677/Parameters_bm_PF00677seed_potts.dat", "../test/PF00677/Test_PF00677.full",
+                          "../test/PF00677/Lambda_PF00677.dat", 0.0, 2.0, filename_out = "../test/PF00677/PF00677.ali",
+                          filename_flag = "../test/PF00677/PF00677.out", 
+                          filename_align = "../test/PF00677/Test_PF00677.fasta", filename_ins = "../test/PF00677/Test_PF00677.ins", delta = 10)
+
+```
 
 
