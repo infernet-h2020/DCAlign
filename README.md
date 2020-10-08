@@ -24,7 +24,7 @@ The code is written in [Julia](https://julialang.org/).
 
 The repository `DCAlign` can be installed within the PackageManager (typing the ] key) using
 
-```(@v1.?) pkg> add https://github.com/anna-pa-m/DCAlign (remember to add the correct name)```
+```(@v1.?) pkg> add https://github.com/infernet-h2020/DCAlign```
 
 and then typing 
 
