@@ -13,10 +13,8 @@ This package contains the implementation of `DCAlign`, a tool for aligning biolo
 - a penalty for adding a gap at the beginning or at the end of the aligned sequence ("external") and one for inserting a gap between two symbols ("internal").
 
 We provide in the `test` folder, the parameters of the DCA models, the gap/insertion penalties used to align the [Pfam](https://pfam.xfam.org/) and [Rfam](https://rfam.xfam.org/) families PF00035, PF00677, PF00684, PF00763, RF00059, RF00162, RF00167, RF01734 whose performances are described in [arXiv:2005.08500](https://arxiv.org/abs/2005.08500). We also add a set of synthetic sequences analyzed in the same work.
-For an arbitrary seed, we will provide soon the sub-module [DCAbuild](https://github.com/anna-pa-m/DCAbuild) in order to learn of all the necessary parameters. 
-<!---
-(see [DCAbuild](https://github.com/anna-pa-m/DCAbuild) page for the documentation).
---->
+For an arbitrary seed, we provide the sub-module `DCAbuild` in order to learn of all the necessary parameters. 
+
 
 The code is written in [Julia](https://julialang.org/).
 
@@ -62,7 +60,7 @@ If the DCA parameters are learned using [PlmDCA](https://github.com/pagnani/PlmD
  ```J a b i j value```              
  ```h a i value```                    
 
-and the gap symbol translates to `q`. To use and properly read them in the alignment process it suffices to set `typel = :plm`. Note that the output parameters of [DCAbuild](https://github.com/anna-pa-m/DCAbuild) will be written using this syntax.
+and the gap symbol translates to `q`. To use and properly read them in the alignment process it suffices to set `typel = :plm`. Note that the output parameters of `DCAbuild` will be written using this syntax.
 
 ### Algorithm parameters
 It is possible to set the value of the (inverse) temperature used for the global Hamiltonian through the parameter `β`. Regarding the convergence criterium, it is possible to set: 
