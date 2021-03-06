@@ -39,10 +39,12 @@ function align_all(
 )
 
     if q == 5
-        ctype = Symbol("nbase")
+        #ctype = Symbol("nbase")
+        ctype = :nbase
         delta = 1000
     else
-        ctype = Symbol("amino")
+        #ctype = Symbol("amino")
+        ctype = :amino
     end
 
     if typel == :bm

@@ -3,13 +3,13 @@
 # 2. FASTA with envelop of domain
 # return: envelopes to align
 
-function enveloptoalign(filefull; ctype::Symbol="amino", pos::Bool=true) 
+function enveloptoalign(filefull; ctype::Symbol=:amino, pos::Bool=true) 
     dful = readfull(filefull, ctype=ctype, pos=pos)
     #dful = readenvelop(filefull, ctype=ctype)
     return dful
 end
 
-function enveloptoalign(filefull,fileenv,fileins; delta = 0, ctype::Symbol="amino") 
+function enveloptoalign(filefull,fileenv,fileins; delta = 0, ctype::Symbol=:amino) 
     denv = readenvelop(fileenv, ctype=ctype)
     #println(length(denv))
     #print(denv)
@@ -61,7 +61,7 @@ function enveloptoalign(filefull,fileenv,fileins; delta = 0, ctype::Symbol="amin
     return al
 end
 
-function readfull(filefull; ctype::Symbol="amino", pos::Bool=true)
+function readfull(filefull; ctype::Symbol=:amino, pos::Bool=true)
     ffull = FastaIO.FastaReader(filefull)
     dheader = Dict{String,String}()
     for (_name,seq) in ffull
@@ -80,7 +80,7 @@ function readfull(filefull; ctype::Symbol="amino", pos::Bool=true)
     dheader
 end
 
-function readenvelop(filenv; ctype::Symbol="amino")
+function readenvelop(filenv; ctype::Symbol=:amino)
     fenve = FastaIO.FastaReader(filenv)
     dheader = Dict{String, Any}()
     for (name,seq) in fenve
