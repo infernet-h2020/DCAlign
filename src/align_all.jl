@@ -153,6 +153,7 @@ function align_all(
         b0 = out.start
         e0 = out.finish
         enT0 = compute_potts_en(J, H, seqpa0, L, ctype)
+        costT0 = compute_cost_function(J,H,seqpo0,L,ctype,lambda_o,lambda_e,μext,μint)
 
         if !typedic
             print_results(
@@ -212,10 +213,12 @@ function align_all(
             seqpo = out.po
         end
         enT = compute_potts_en(J, H, seqpa, L, ctype)
+        costT = compute_cost_function(J,H,seqpo,L,ctype,lambda_o,lambda_e,μext,μint)
         b = out.start
         e = out.finish
 
-        if enT < enT0
+        #if enT < enT0
+        if costT < costT0
             @printf(
                 file_out,
                 ">%s/%i-%i\n",
