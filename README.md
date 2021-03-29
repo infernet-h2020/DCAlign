@@ -40,7 +40,7 @@ A step-by-step description of the alignment procedure of a single sequence is pr
 
 + `q` : the length of the alphabet. The package assumes that for protein sequences we set ```q = 21``` while for RNA sequences ```q = 5```; <br>
 + `L` : the number of sites (i.e. the length of the aligned sequences) of the desired multiple sequence alignment; <br>
-+ `filename_par`: name of the file where the DCA parameters are stored. By default, the package assumes that they are written using the syntax of [bmDCA](https://github.com/matteofigliuzzi/bmDCA) and [adabmDCA](https://github.com/anna-pa-m/adabmDCA) (not yet available) output: <br>
++ `filename_par`: name of the file where the DCA parameters are stored. By default, the package assumes that they are written using the syntax of [bmDCA](https://github.com/matteofigliuzzi/bmDCA) and [adabmDCA](https://github.com/anna-pa-m/adabmDCA) output: <br>
   ```J i j a b value``` <br> 
   ```h i a value``` <br>
   where _i_ and _j_ run over the columns of the MSA while _a_ and _b_ run over the symbol (`-` translates in `0`).
