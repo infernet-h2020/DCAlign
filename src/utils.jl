@@ -41,7 +41,7 @@ function check_assignment(P,verbose,N)
         idxn = []
         idxx = []
         for xj in 0:1, nj in 0:N+1
-	    if P[i-1][xj,n] > maxP
+	    if P[i-1][xj,nj] > maxP
 	       maxP = P[i-1][xj,nj]
 	       idxx = xj
 	       idxn = nj
