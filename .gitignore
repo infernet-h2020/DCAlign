@@ -4,4 +4,6 @@
 test/*~
 src/*~
 notebook/.ipynb_checkpoints/
-src/script.jl
+.vscode/
+seeds/*.fasta
+seeds/*.ins
