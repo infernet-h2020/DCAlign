@@ -1,35 +1,60 @@
 function update!(allvar::AllVar)
-    @extract allvar : alg
-    @extract alg : nprint verbose epsconv maxiter μext μint
+    @extract allvar : alg pbf data
+    @extract alg : nprint verbose maxiter thP Δβ Δt
+    @extract pbf : L N
     ΔP,ΔB,ΔF = 0.0,0.0,0.0
     en = Inf
     it = maxiter
-    delta = 0
-    initialize_all(allvar)
+    β = 1.0
+    initialize_all!(allvar)
     for it in 1:maxiter
         ΔP,ΔB,ΔF = onesweep!(allvar)
-        en = compute_en(allvar)
+        en = compute_en(allvar, β = β)
+        minp, sat = check_solution(allvar)
         if mod(it,nprint) == 0 && verbose
-	    @printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext, μint,ΔP,ΔB,ΔF)
-         end
-         if maximum(max.(ΔP,ΔB,ΔF)) <= epsconv
-            if verbose
-	        	@printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext,μint, ΔP,ΔB,ΔF)
-            end
-            return it, :converged, en
+	        @printf("it = %d -- en = %.2f sat = %d min(max P) = %.2e β = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it,
+                 en, sat, minp, β, ΔP,ΔB,ΔF)
         end
+        if Δβ > 0.0
+            if sat && minp > thP
+                if verbose
+	        	    @printf("it = %d -- en = %.2f sat = %d min(max P) = %.2e β = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, 
+                    en, sat, minp, β, ΔP,ΔB,ΔF)
+                end
+                return it, :converged, en
+            end
+        else
+            if maximum([ΔP, ΔB, ΔF]) < 1e-4
+                if verbose
+	        	    @printf("it = %d -- en = %.2f sat = %d min(max P) = %.2e β = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, 
+                    en, sat, minp, β, ΔP,ΔB,ΔF)
+                end
+                return it, :converged, en
+            end
+        end
+        if mod(it, Δt) == 0
+            β += Δβ
+            allvar.jh.J .= β .* data.J
+            allvar.jh.h .= β .* data.h
+            allvar.alg.Λ .= data.Λ .^ β
+        end
+        flush(stdout)
+        flush(stderr)
     end
     if verbose
-        @printf("it = %d -- en = %.2f μext = %.2f μint = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, μext, μint, ΔP,ΔB,ΔF)
+        @printf("it = %d -- en = %.2f (ΔP,ΔB,ΔF) = %.2e %.2e %.2e \n", it, en, ΔP,ΔB,ΔF)
     end
+    
     return maxiter, :unconverged, en
 end
 
-function initialize_all(allvar::AllVar)
+function initialize_all!(allvar::AllVar)
     @extract allvar : pbf alg
     @extract pbf : L N P B F newP newB newF
 
+    
     for marg in (newP, newB, newF)
+        marg .= OffsetArray(rand(2,N+2), 0:1, 0:N+1)
         marg[1,0] = 0.0
         marg[1,N+1] = 0.0
         normm = sum(marg)
@@ -37,6 +62,7 @@ function initialize_all(allvar::AllVar)
     end
     for i in 1:L
         for marg in (P[i], B[i], F[i])
+            marg .= OffsetArray(rand(2,N+2), 0:1, 0:N+1)
             marg[1,0] = 0.0
             marg[1,N+1] = 0.0
             normm = sum(marg)
@@ -56,13 +82,16 @@ function onesweep!(allvar::AllVar)
         newPBFi!(allvar, i::Int)
         p,f,b = P[i], F[i], B[i]
         if any(isnan, newP)
-            warn("node $i has NaN in marginal")
+            @warn "node $i has NaN in marginal"
+            initialize_all!(allvar)
         end
         if any(isnan, newB)
-            warn("node $i has NaN in backward term")
+            @warn "node $i has NaN in backward term"
+            initialize_all!(allvar)
         end
         if any(isnan, newF)
-            warn("node $i has NaN in forward term")
+            initialize_all!(allvar)
+            @warn "node $i has NaN in forward term"
         end
         ΔP = max(ΔP, maximum(abs.(newP-p)))
         p .= damp .* p .+ (1.0 - damp) .* newP # inplace sum
@@ -107,23 +136,25 @@ function newPBFi!(allvar::AllVar, i::Int)
         if normi > 0
             marg ./= normi
         else
-            warn("norm site = $i = $normi")
-            fill!(marg,inv(2(N+2)))
+            @warn "norm site = $i = $normi"
+            initialize_all!(allvar)
+            #fill!(marg,inv(2(N+2)))
         end
         if any(isnan,marg)
-            warn("marg $i contains NaN!")
-            fill!(marg,inv(2(N+2)))
+            @warn "marg $i contains NaN!"
+            initialize_all!(allvar)
+            #fill!(marg,inv(2(N+2)))
         end
     end
 end
 
 
 function central!(central::Marginal, allvar::AllVar, i::Int)
-    @extract allvar:pbf jh seq alg
-    @extract pbf:N P L q
-    @extract jh:J h
-    @extract seq:intseq
-    @extract alg:μext μint
+    @extract allvar : pbf jh seq alg
+    @extract pbf : N P L q
+    @extract jh : J h
+    @extract seq : intseq
+    @extract alg : Λ μext μint
 
     # case xᵢ = 1 (match)
     A0 = q
@@ -133,17 +164,19 @@ function central!(central::Marginal, allvar::AllVar, i::Int)
         for j = 1:i-2
             Pj = P[j]
             for nⱼ = 0:nᵢ-1 # light cone constraint nⱼ < nᵢ
-                Anⱼ = nⱼ == 0 ? A0 : intseq[nⱼ]
-                expscra += J[Anⱼ, Anᵢ, j, i] * Pj[1, nⱼ]
-                expscra += J[A0, Anᵢ, j, i] * Pj[0, nⱼ]
+                Anⱼ = (nⱼ == 0) ? A0 : intseq[nⱼ]
+                Δn = nᵢ - nⱼ
+                expscra +=  J[Anⱼ, Anᵢ, j, i] * Pj[1, nⱼ] * Λ[j,i,Δn] 
+                expscra +=  J[A0, Anᵢ, j, i] * Pj[0, nⱼ] * Λ[j,i,Δn] 
             end
         end
         for j = i+2:L
             Pj = P[j]
             for nⱼ = nᵢ:N+1 # light cone constraint nⱼ > nᵢ
                 Anⱼ = nⱼ == N + 1 ? A0 : intseq[nⱼ]
-                expscra += nᵢ == nⱼ ? 0.0 : J[Anⱼ, Anᵢ, j, i] * Pj[1, nⱼ]
-                expscra += J[A0, Anᵢ, j, i] * Pj[0, nⱼ]
+                Δn = nⱼ - nᵢ 
+                expscra += (nᵢ == nⱼ) ? 0.0 : J[Anⱼ, Anᵢ, j, i] * Pj[1, nⱼ] * Λ[i,j,Δn] 
+                expscra += J[A0, Anᵢ, j, i] * Pj[0, nⱼ] * Λ[i,j,Δn] 
             end
         end
         central[1, nᵢ] = expscra
@@ -154,31 +187,33 @@ function central!(central::Marginal, allvar::AllVar, i::Int)
         for j = 1:i-2
             Pj = P[j]
             for nⱼ = 0:nᵢ
+                Δn = nᵢ - nⱼ 
                 Anⱼ = (nⱼ == 0 || nⱼ == N + 1) ? A0 : intseq[nⱼ]
-                expscra += J[Anⱼ, A0, j, i] * Pj[1, nⱼ]
-                expscra += J[A0, A0, j, i] * Pj[0, nⱼ]
+                expscra += J[Anⱼ, A0, j, i] * Pj[1, nⱼ] * Λ[i,j,Δn] 
+                expscra += J[A0, A0, j, i] * Pj[0, nⱼ] * Λ[i,j,Δn] 
             end
         end
         for j = i+2:L
             Pj = P[j]
             for nⱼ = nᵢ:N+1
+                Δn = nⱼ - nᵢ 
                 Anⱼ = (nⱼ == 0 || nⱼ == N + 1) ? A0 : intseq[nⱼ]
-                expscra += nᵢ == nⱼ ? 0.0 : J[Anⱼ, A0, j, i] * Pj[1, nⱼ]
-                expscra += J[A0, A0, j, i] * Pj[0, nⱼ]
+                expscra += (nᵢ == nⱼ) ? 0.0 :  J[Anⱼ, A0, j, i] * Pj[1, nⱼ] * Λ[i,j,Δn] 
+                expscra += J[A0, A0, j, i] * Pj[0, nⱼ] * Λ[i,j,Δn] 
             end
         end
         central[0, nᵢ] = expscra
     end
     @inbounds for nᵢ = 0:N+1
         if i == 1
-            central[0, nᵢ] = nᵢ == 0 ? central[0, nᵢ] - μext + h[A0, i] : -Inf
+            central[0, nᵢ] = nᵢ == 0 ? central[0, nᵢ] + h[A0, i] -μext : -Inf
         elseif i == L
             central[0, nᵢ] =
-                nᵢ == N + 1 ? central[0, nᵢ] - μext + h[A0, i] : -Inf
+                nᵢ == N + 1 ? central[0, nᵢ] + h[A0, i] -μext : -Inf
         else
             central[0, nᵢ] =
-                (nᵢ == 0 || nᵢ == N + 1) ? central[0, nᵢ] - μext + h[A0, i] :
-                central[0, nᵢ] - μint + h[A0, i]
+                (nᵢ == 0 || nᵢ == N + 1) ? central[0, nᵢ] + h[A0, i] -μext :
+                central[0, nᵢ] + h[A0, i] -μint
         end
     end
     #cannot match n = 0 pointer
@@ -194,7 +229,7 @@ function forward!(forward::Marginal,allvar::AllVar,i::Int)
     @extract pbf : N P F q L
     @extract jh : J
     @extract seq : intseq
-    @extract alg : λo λe
+    @extract alg : Λ
     fwdm1 = F[i-1]
 
     A0 = q
@@ -204,12 +239,11 @@ function forward!(forward::Marginal,allvar::AllVar,i::Int)
         Anᵢ = intseq[nᵢ]
          for nᵢm in 0:nᵢ-1
             Anᵢm = nᵢm == 0 ? A0 : intseq[nᵢm]
-            Δn = nᵢ- nᵢm -1
-            pen = (Δn > 0)*(nᵢm > 0)*(-λo[i] - λe[i]*(Δn - 1));
+            Δn = nᵢ- nᵢm 
             # case xᵢm = 1 (match)
-            scra += fwdm1[1,nᵢm] * exp(J[Anᵢm,Anᵢ,i-1,i] + pen)
+            scra += fwdm1[1,nᵢm] * exp(J[Anᵢm,Anᵢ,i-1,i]) * Λ[i-1,i,Δn] 
             # case xᵢm = 0 (gap)
-            scra += fwdm1[0,nᵢm] * exp(J[A0,Anᵢ,i-1,i] + pen)
+            scra += fwdm1[0,nᵢm] * exp(J[A0,Anᵢ,i-1,i]) * Λ[i-1,i,Δn] 
         end
         forward[1, nᵢ] = scra
     end
@@ -218,12 +252,12 @@ function forward!(forward::Marginal,allvar::AllVar,i::Int)
     # case xᵢ = 0 gap
     @inbounds  for nᵢ in 0:N+1
        Anᵢ = (nᵢ == 0 || nᵢ == N+1) ? A0 : intseq[nᵢ]
-       forward[0,nᵢ] = (nᵢ == 0 || nᵢ == N+1) ? 0.0 : fwdm1[1,nᵢ] * exp(J[Anᵢ,A0,i-1,i])
-       forward[0,nᵢ] += fwdm1[0,nᵢ] * exp(J[A0, A0,i-1,i])
+       forward[0,nᵢ] = (nᵢ == 0 || nᵢ == N+1) ? 0.0 : fwdm1[1,nᵢ] * exp(J[Anᵢ,A0,i-1,i]) * Λ[i-1,i,0] 
+       forward[0,nᵢ] += fwdm1[0,nᵢ] * exp(J[A0, A0,i-1,i]) * Λ[i-1,i,0]
     end
     @inbounds  for nᵢm = 1:N
         Anᵢm = intseq[nᵢm]
-        forward[0,N+1] += fwdm1[1,nᵢm] * exp(J[Anᵢm,A0,i-1,i])
+        forward[0,N+1] += fwdm1[1,nᵢm] * exp(J[Anᵢm,A0,i-1,i]) * Λ[i-1,i,N+1-nᵢm]
     end
 end
 
@@ -232,7 +266,7 @@ function backward!(backward::Marginal,allvar::AllVar,i::Int)
     @extract pbf : N P B q
     @extract jh : J
     @extract seq : intseq
-    @extract alg : λo λe
+    @extract alg : Λ  
 
     bckp1 = B[i+1]
 
@@ -241,42 +275,38 @@ function backward!(backward::Marginal,allvar::AllVar,i::Int)
     @inbounds for nᵢ in 1:N
         Anᵢ = intseq[nᵢ]
         # case xᵢp = 0 (gap)
-        scra = bckp1[0,nᵢ] * exp(J[A0,Anᵢ,i+1,i])
-        scra += bckp1[0,N+1] * exp(J[A0,Anᵢ,i+1,i])
+        scra = bckp1[0,nᵢ] * exp(J[A0,Anᵢ,i+1,i]) * Λ[i+1,i,0] 
+        scra += bckp1[0,N+1] * exp(J[A0,Anᵢ,i+1,i]) * Λ[i+1,i,N+1-nᵢ] 
         # case xᵢp = 1 (match)
          for nᵢp in nᵢ+1:N
             Anᵢp = intseq[nᵢp]
-            Δn = nᵢp - nᵢ - 1
-            pen = (Δn > 0)*(-λo[i+1] - λe[i+1]*(Δn - 1))
-            scra += bckp1[1,nᵢp] * exp(J[Anᵢp, Anᵢ,i+1,i] + pen )
+            Δn = nᵢp - nᵢ 
+            scra += bckp1[1,nᵢp] * exp(J[Anᵢp, Anᵢ,i+1,i]) * Λ[i+1,i,Δn] 
         end
         backward[1,nᵢ] = scra
     end
     # case xᵢ = 0 (gap)
     @inbounds for nᵢ in 0:N+1
         # case xᵢp = 0 (gap)
-        scra = bckp1[0,nᵢ] * exp(J[A0, A0,i+1,i])
+        scra = bckp1[0,nᵢ] * exp(J[A0, A0,i+1,i]) * Λ[i+1,i,0] 
         # case xᵢp = 1 (match)
          for nᵢp in nᵢ+1:N
             Anᵢp = intseq[nᵢp]
-            Δn = nᵢp - nᵢ- 1
-            pen = (Δn > 0)*(nᵢ > 0)*(-λo[i+1] -λe[i+1]*(Δn - 1))
-            scra += bckp1[1,nᵢp] * exp(J[Anᵢp, A0, i+1,i] + pen)
+            Δn = nᵢp - nᵢ
+            scra += bckp1[1,nᵢp] * exp(J[Anᵢp, A0, i+1,i]) * Λ[i+1,i,Δn]
         end
         backward[0,nᵢ] = scra
     end
     backward[1,0] = 0.0
     backward[1,N+1] = 0.0
-
 end
 
-function compute_en(allvar::AllVar)
+function compute_en(allvar::AllVar; β::Float64 = 1.0)
 
     @extract allvar : seq pbf jh alg
     @extract jh : J h
     @extract pbf : L P q N
     @extract seq : intseq
-    @extract alg : λo λe μext μint
 
     en = 0.0
     match = zeros(Int,L)
@@ -290,11 +320,11 @@ function compute_en(allvar::AllVar)
         idx = n[i]
         An = match[i] == 1 ? intseq[idx] : q
         if n[i] == 0 || n[i] == N + 1
-            en += match[i] == 0 ? μext -h[An,i] : -h[An,i]
+            en += match[i] == 0 ? -h[An,i] : -h[An,i]
             hpart += -h[An,i]
         else
             hpart += -h[An,i]
-            en += match[i] == 0 ? μint -h[An,i] : -h[An,i]
+            en += match[i] == 0 ? -h[An,i] : -h[An,i]
         end
     end
     Jpart = 0.0
@@ -309,16 +339,22 @@ function compute_en(allvar::AllVar)
             en += -J[Ai,Aj,i,j]
         end
     end
-    @inbounds for i in 1:L-1
-        ni = n[i]
-        Ai = match[i] == 1 ? intseq[ni] : q
-        if match[i+1] == 1
-            nj = n[i+1]
-            Δn = nj - ni - 1
-            pen = (Δn > 0)*(ni > 0)*(λo[i+1] + λe[i+1]*(Δn - 1))
-            en += pen
-        end
+    return en / β      
+end
+
+function check_solution(allvar::AllVar)
+
+    @extract allvar : pbf
+    @extract pbf : L P N
+
+    minP = Inf
+    for i in 1:L
+        a, _ = findmax(P[i])
+        minP = min(minP, a)
     end
-    #println("Jpart ", Jpart, " hpart ", hpart)
-    return en
+    @assert minP > 0.0
+    sat = check_assignment(P, false, N)
+
+    return minP, sat
+
 end

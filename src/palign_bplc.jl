@@ -1,64 +1,50 @@
-function palign(
-    lseq,
-    J::Array{Float64,4},
-    h::Array{Float64,2},
-    λo::Array{Float64,1},
-    λe::Array{Float64,1};
+function palign(lseq, J::Array{Float64,4}, h::Array{Float64,2}, Λ::OffsetArray{Float64,3,Array{Float64,3}}, ctype::Symbol;
     verbose::Bool = true,
     maxiter::Integer = 100,
     nprint::Integer = 500,
-    epsconv::Real = 1e-4,
     seed::Int = 0,
-    damp::Real = 0,
-    μint::Real = 1.0,
-    μext::Real = 1.0,
-    λ::Real = 1.0,
-    T0::Bool = false,
-    mindec::Int = 10,
-    ctype::Symbol = "amino",
+    damp::Float64 = 0.0,
+    pcount::Float64 = 0.0001,
+    Δβ::Float64 = 0.05,
+    thP::Float64 = 0.30,
+    Δt::Int64 = 10,
+    μext::Float64 = 0.0,
+    μint::Float64 = 0.0
 )
 
+    verbose && println("Run DCAlign for RNA or protein alignment")
     Random.seed!(seed)
     en = Inf
     seq = Seq(lseq.header, lseq.strseq, lseq.intseq, ctype) # crappy way to avoid recompilation
-    jh = Jh(J, h)
-    alg =
-        Alg(verbose, maxiter, epsconv, mindec, damp, μext, λo, λe, μint, nprint)
+    jh = Jh(deepcopy(J), deepcopy(h))
     pbf = PBF(jh, seq)
-    aux = lseq.strseq
-    allvar = AllVar(pbf, jh, seq, alg)
-    @extract pbf:L N
-    @extract pbf:newP
-    if T0 == false
-        if verbose
-            println("Run Belief Propagation, large-connectivity approximation, for proteins alignment")
-            println("L $L = length of the Potts model")
-            println("N $N = length of the sequence A to be aligned")
-            println("A: $aux")
-        end
-        maxiter, flagconv, en = update!(allvar)
-    else
-        if verbose
-            println("Run Belief Propagation, large-connectivity approximation, for proteins alignment")
-            println("L $L = length of the Potts model")
-            println("N $N = length of the sequence A to be aligned")
-            println("A: $aux")
-            println("T = 0, using β → +∞ limit")
-        end
-        maxiter, flagconv, en = updateT0!(allvar)
+    @extract pbf : L N
+    if L > N
+        verbose && println("Looking for a fragment...more time needed")
+        maxiter = max(5000, maxiter)
     end
+    alg = Alg(verbose, maxiter, damp, Λ, nprint, pbf.N, pbf.L, pcount, thP = thP, Δβ = Δβ, μext = μext, μint = μint, Δt = Δt)
+    aux = lseq.strseq
+    data = Data(J, h, deepcopy(alg.Λ))
+    allvar = AllVar(pbf, jh, seq, alg, data)
+    
+    if verbose
+        println("L = $L: length of the Potts model")
+        println("N = $N: length of the sequence A to be aligned")
+        println("A: $aux")
+    end
+    maxiter, flagconv, en = update!(allvar)
     return maxiter, flagconv, allvar, en
 end
 
 function palign(
-    filefasta::String,
+    sequn::String,
     J::Array{Float64,4},
     h::Array{Float64,2},
-    λo::Array{Float64,1},
-    λe::Array{Float64,1},
+    Λ::OffsetArray{Float64,3,Array{Float64,3}},
     ctype::Symbol;
-    kwdargs...,
+    kwdargs...
 )
-    seq = readunalignedfasta(filefasta, ctype)[1]
-    palign(seq, J, h; kwdargs...)
+    seq = readunalignedseq(sequn, ctype)
+    palign(seq, J, h, Λ, ctype; kwdargs...)
 end

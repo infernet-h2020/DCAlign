@@ -1,71 +1,56 @@
 
 struct DecodedPosterior
-    pa::String
-    po::String
-    start::Int
+    seq::String          # aligned sequence usign argmax(P)
+    score::String        # score = max(P[argmax])
+    frag::String         # aligned sequence usign max(P[argmax]) or `-` if max(P[argmax]) < 5 (used when it does not converge -> fragment)
+    seqins::String       # aligned sequence with insertions
+    fragins::String      # aligned fragment with insertions
+    fullfrag::String     # full sequence with match states in uppercase and gaps (associated with fragment)
+    fullseq::String      # full sequence with match states in uppercase and gaps
+    start::Int           # start and end index of the aligned part w.r.t the full sequence
     finish::Int
+    frag_start::Int
+    frag_finish::Int
 end
 
 function Base.show(io::IO, x::DecodedPosterior)
-    println(io,x.pa)
-    println(io,x.po)
-    print_with_color(:cyan,io,x.fds,"\n")
-    print(io,x.fdp)
+    println(io, x.seq)
+    println(io, x.seqins)
+    print_with_color(:cyan, io, x.fds, "\n")
+    print(io, x.fdp)
 end
 
 
-function check_assignment(P,verbose,N)
+function check_assignment(P, verbose, N)
 
     count = 0
     L = length(P)
     if verbose == true
-	println("Let us check the assignment...")
+        println("Let us check the assignment...")
     end
-    for i in L:-1:2
-        maxP = -Inf
-	idxn = []
-	idxx = []
-	for x in 0:1, n in 0:N+1
-	   if P[i][x,n] > maxP
-	      maxP = P[i][x,n]
-	      idxx = x
-	      idxn = n
-	   end
-	end
-	if maxP == -Inf
-	   println("Problem with node $i")
-	end
-	n =idxn
-	x =idxx
-        maxP = -Inf
-        idxn = []
-        idxx = []
-        for xj in 0:1, nj in 0:N+1
-	    if P[i-1][xj,nj] > maxP
-	       maxP = P[i-1][xj,nj]
-	       idxx = xj
-	       idxn = nj
-	    end
-	 end
-	 nj = idxn
-	 xj = idxx
-	 sat = x == 1 ? (n > nj) : (n == nj || n == N+1)
+    a = CartesianIndex{2}
+    for i = L:-1:2
+        a = argmax(P[i])
+        x = a[1]; n = a[2];
+        a = argmax(P[i-1])
+        xj = a[1]; nj = a[2]
+        sat = (x == 1) ? (n > nj) : (n == nj || n == N + 1)
         if sat == false && verbose == true
-	   println("- $i → ($x, $n) $i-1 → ($xj, $nj)")
+            println("- $i → ($x, $n) $i-1 → ($xj, $nj)")
         end
         count += 1 - convert(Int, sat)
     end
 
     if count == 0
-	if verbose == true
-	    println("The subsequence satisfies the constraints")
-	end
+        if verbose == true
+            println("The subsequence satisfies the constraints")
+        end
         return true
     else
-	if verbose == true
-	    println("There are $count short-range constraints not satisfied")
-	end
-	return false
+        if verbose == true
+            println("There are $count short-range constraints not satisfied")
+        end
+        return false
     end
 
 end
@@ -77,93 +62,29 @@ end
 
 aminoalphabet = Dict{String,Int64}()
 nbasealphabet = Dict{String,Int64}()
-aminoalphabet = Dict('A'=> 1, 'B'=> 21, 'C' =>2, 'D'=> 3, 'E'=> 4, 'F'=> 5, 'G'=> 6, 'H'=> 7, 'I'=> 8, 'J'=> 21,'K'=> 9, 'L'=> 10, 'M'=> 11, 'N'=>12, 'O'=>21, 'P'=> 13, 'Q'=>14, 'R'=>15, 'S'=>16, 'T'=>17, 'U'=>21, 'V'=>18,'W'=>19, 'X'=>21, 'Y'=>20, 'Z'=> 21, '-'=> 21)
-nbasealphabet = Dict('A'=> 1, 'U'=> 2, 'C'=> 3, 'G'=> 4, '-'=> 5 ,'T'=> 2, 'N'=> 5, 'R'=> 5, 'X' => 5, 'V'=> 5, 'H'=>5, 'D'=>5, 'B'=>5, 'M'=>5, 'W'=>5, 'S'=>5, 'Y'=>5, 'K'=>5)
+aminoalphabet = Dict('A' => 1, 'B' => 21, 'C' => 2, 'D' => 3, 'E' => 4, 'F' => 5, 'G' => 6, 'H' => 7, 'I' => 8, 'J' => 21, 'K' => 9, 'L' => 10, 'M' => 11, 'N' => 12, 'O' => 21, 'P' => 13, 'Q' => 14, 'R' => 15, 'S' => 16, 'T' => 17, 'U' => 21, 'V' => 18, 'W' => 19, 'X' => 21, 'Y' => 20, 'Z' => 21, '-' => 21)
+nbasealphabet = Dict('A' => 1, 'U' => 2, 'C' => 3, 'G' => 4, '-' => 5, 'T' => 2, 'N' => 5, 'R' => 5, 'X' => 5, 'V' => 5, 'H' => 5, 'D' => 5, 'B' => 5, 'M' => 5, 'W' => 5, 'S' => 5, 'Y' => 5, 'K' => 5)
 
 function letter2num(c::Union{Char,UInt8}, ctype::Symbol)
     if ctype == :amino
-	return aminoalphabet[c]
+        return aminoalphabet[c]
     end
     if ctype == :nbase
-	return nbasealphabet[c]
+        return nbasealphabet[c]
     end
 end
 
-function compute_cost_function(J::Array{Float64,4}, h::Array{Float64,2}, seqins::String, L::Int, ctype::Symbol, λo::Vector{Float64}, λe::Vector{Float64}, μext::Float64, μint::Float64)
 
-   seq = ""
-   N = length(seqins)
-   for i = 1:N
-      if isuppercase(seqins[i]) || seqins[i] == '-'
-	 seq *= seqins[i]
-      end
-   end
-   #println(seqins)
-   #println(seq)
-   en = compute_potts_en(J,h,seq,L,ctype)
-   extend = false
-   idx = 0
-   first = true
-   nopen = 0
-   next = 0
-   for i = 1:N
-      if isuppercase(seqins[i]) || seqins[i] == '-'
-	 idx += 1
-	 extend = false
-      elseif islowercase(seqins[i]) & extend == false
-	 extend = true
-	 nopen += 1
-	 en += λo[idx+1]
-	 #println("open ", idx+1, " ", λo[idx+1])
-      elseif islowercase(seqins[i]) & extend == true
-	 en += λe[idx+1]
-	 next += 1
-	 #println("ext ", idx+1, " ", λe[idx+1])
-      end
-   end
-   ngaps_int = 0
-   ngaps_ext = 0
-   first = true
-   for i = 1:L
-      if seq[i] == '-'
-	 if first
-	    ngaps_ext += 1
-	 else
-	    ngaps_int += 1
-	 end
-      end
-      if seq[i] != '-'
-	 first = false
-      end
-   end
-   first = true
-   for i = L:-1:1
-      if seq[i] == '-'
-	 if first
-	    ngaps_ext += 1
-	    ngaps_int -= 1
-	 end
-      end
-      if seq[i] != '-'
-	 first = false
-      end
-   end
-   #println(ngaps_ext, " gaps esterni e ", ngaps_int, " interni")
-   #println(nopen, " open insertions plus ", next, " extended")
-   en += μext * ngaps_ext + μint * ngaps_int
-   return en
-end
-
-function compute_potts_en(J::Array{Float64,4}, h::Array{Float64,2}, seq::String, L::Int,ctype::Symbol)
+function compute_potts_en(J::Array{Float64,4}, h::Array{Float64,2}, seq::String, L::Int, ctype::Symbol)
 
     en = 0
-    for i in 1:L
-        Aᵢ = letter2num(seq[i],ctype)
-        en += -h[Aᵢ,i]
-        for j in i+1:L
-            Aⱼ = letter2num(seq[j],ctype)
+    for i = 1:L
+        Aᵢ = letter2num(seq[i], ctype)
+        en += -h[Aᵢ, i]
+        for j = i+1:L
+            Aⱼ = letter2num(seq[j], ctype)
 
-            en += -J[Aᵢ,Aⱼ,i,j]
+            en += -J[Aᵢ, Aⱼ, i, j]
         end
     end
     return en
@@ -173,8 +94,8 @@ function count_gaps_ins(v::String)
 
     N = length(v)
     Ng = 0
-	Ni = 0
-	Nb = 0
+    Ni = 0
+    Nb = 0
     types = zeros(N)
     for i = 1:N
         if isuppercase(v[i])
@@ -188,7 +109,7 @@ function count_gaps_ins(v::String)
         end
     end
     for i = 1:N-1
-        if v[i] =='-'
+        if v[i] == '-'
             Ng += 1
         elseif islowercase(v[i])
             Ni += 1
@@ -210,34 +131,30 @@ end
 function hammingdist(seqaux, seqtrue)
     length(seqaux) == length(seqtrue) || error("seqs of different lengths")
     ctr = 0
-	moreg = 0
-	lessg = 0
-	diffm = 0
+    moreg = 0
+    lessg = 0
+    diffm = 0
     for i in eachindex(seqaux)
         if seqaux[i] !== seqtrue[i]
             ctr += 1
         end
-    	if seqaux[i] == '-' && seqtrue[i] != '-'
-	    	moreg += 1
-		end
-		if seqaux[i] != '-' && seqtrue[i] == '-'
-	    #display(["lg" seqaux[i] seqtrue[i]])
-	    	lessg += 1
-		end
-		if seqaux[i] != '-' && seqtrue[i] != '-' && seqaux[i] != seqtrue[i]
-	    	diffm +=1
-		end
+        if seqaux[i] == '-' && seqtrue[i] != '-'
+            moreg += 1
+        end
+        if seqaux[i] != '-' && seqtrue[i] == '-'
+            #display(["lg" seqaux[i] seqtrue[i]])
+            lessg += 1
+        end
+        if seqaux[i] != '-' && seqtrue[i] != '-' && seqaux[i] != seqtrue[i]
+            diffm += 1
+        end
     end
     return ctr, moreg, lessg, diffm
 end
 
-function read_parameters(
-    filename::String,
-    q::Int,
-    L::Int;
-    gap::Int = 0,
-    typel::Symbol = :bm,
-)
+
+
+function read_parameters(filename::String, q::Int, L::Int; gap::Int = 0, typel::Symbol = :bm) # generic function if input is a file
 
     if typel == :plm
         @info "Assuming J a b i j and h a i format"
@@ -302,73 +219,97 @@ function read_parameters(
     return J, h
 end
 
-function decodeposterior(P,strseq)
+function decodeposterior(P, strseq; thP::Float64=0.5)
 
     N = length(strseq)
     L = length(P)
-    pa = ""
-    for i in 1:L
+    seq = ""
+    score = ""
+    frag = ""
+    for i = 1:L
         maxP = -Inf
-	idxx = []
-	idxn = []
-        for x in 0:1, n in 0:N+1
-	    if P[i][x,n] > maxP
-	       maxP = P[i][x,n]
-	       idxx = x
-	       idxn = n
-	    end
+        idxx = []
+        idxn = []
+        for x = 0:1, n = 0:N+1
+            if P[i][x, n] > maxP
+                maxP = P[i][x, n]
+                idxx = x
+                idxn = n
+            end
         end
-	if maxP == -Inf
-	   println("Problem with $i")
-	end
-	n = idxn
-	x = idxx
-	if x == 0
-	    pa *= '-'
+        if maxP == -Inf
+            println("Problem with $i")
+        end
+        sc = convert(Int,mod(floor(Int,maxP*10),10))
+        score *= (sc == 10) ? '*' : string(sc,pad=1)
+        n = idxn
+        x = idxx
+        if x == 0
+            frag *= '-'
+            seq *= '-'
         else
-	    pa *= strseq[n]
+            frag *= (maxP > thP) ? strseq[n] : '-'
+            seq *= strseq[n]
         end
     end
-    po = ""
+    seqins = ""
+    fragins = ""
+    fullseq = ""
+    fullfrag = ""
     i = 1
     start = false
     nold = 0
-	f = 0
-	l = 0
+    f = 0
+    l = 0
+    ff = 0
+    ll = 0
     while i <= L
         maxP = -Inf
-	idxx = []
-	idxn = []
-	for x in 0:1, n in 0:N+1
-	   if P[i][x,n] > maxP
-	      maxP = P[i][x,n]
-	      idxx = x
-	      idxn = n
-	   end
-	end
+        idxx = []
+        idxn = []
+        for x = 0:1, n = 0:N+1
+            if P[i][x, n] > maxP
+                maxP = P[i][x, n]
+                idxx = x
+                idxn = n
+            end
+        end
         n = idxn
-		x = idxx
+        x = idxx
         if x == 1 && start == true
             delta = n - nold - 1
             if delta > 0
-                for d in 1:delta
-                    po *= lowercase(strseq[nold+d])
+                for d = 1:delta
+                    seqins *= lowercase(strseq[nold+d])
+                    fragins *= lowercase(strseq[nold+d])
                 end
             end
-            po *= strseq[n]
+            fragins *= (maxP > thP) ? strseq[n] : lowercase(strseq[n]) * '-'
+            seqins *= strseq[n]
             nold = n
             l = n
+            ll = (maxP > thP) ? n : ll
         end
         if x == 1 && start == false
             start = true
-            po *= strseq[n]
+            fragins *= (maxP > thP) ? strseq[n] : lowercase(strseq[n]) * '-'
+            seqins *= strseq[n]
             nold = n
             f = n
+            ff = (maxP > thP) ? n : ff
         end
         if x == 0
-            po *= "-"
+            seqins *= '-'
+            fragins *= '-'
         end
         i += 1
     end
-    DecodedPosterior(pa,po,f,l)
+    fullseq *= lowercase.(strseq[1:f-1])
+    fullseq *= seqins
+    fullseq *= lowercase.(strseq[l+1:end])
+    fullfrag *= lowercase.(strseq[1:f-1])
+    fullfrag *= fragins
+    fullfrag *= lowercase.(strseq[l+1:end])
+    #@show strseq[l+1:end], f, l, ff, ll
+    DecodedPosterior(seq, score, frag, seqins, fragins, fullfrag, fullseq, f, l, ff, ll)
 end
