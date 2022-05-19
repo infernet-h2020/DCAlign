@@ -3,7 +3,9 @@ using FastaIO
 using Printf, Random, Logging, Distributed, DelimitedFiles
 using ExtractMacro, OffsetArrays
 using StatsBase, LinearAlgebra, Statistics
-export Seq, palign, AllVar, align_seed_mafft, align_seed_pfam, align_seed_rfam
+import HMMER_jll, Infernal_jll
+
+export Seq, palign, AllVar, align_seed_mafft, align_seed_pfam, align_seed_rfam, hmmbuild
 
 import Base.show
 ### All and Back-forw algorithm
