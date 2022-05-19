@@ -351,11 +351,11 @@ function linsi(
     end
 end
 
-function hmmbuild(iFile::String,  ohmmFile::String;  nthreads::Int=1, extra::String="")
+function hmmbuild(iFile::String, oFile::String,  hmmFile::String;  nthreads::Int=1, extra::String="")
     if length(extra) > 1
-        run(pipeline(`$(HMMER_jll.hmmbuild()) $extra --cpu $nthreads $ohmmFile $iFile`), devnull)
+        run(pipeline(`$(HMMER_jll.hmmbuild()) -O $oFile $extra --cpu $nthreads $hmmFile $iFile`), devnull)
     else
-        run(pipeline(`$(HMMER_jll.hmmbuild())  --cpu $nthreads $ohmmFile $iFile`), devnull)
+        run(pipeline(`$(HMMER_jll.hmmbuild()) -O $oFile --cpu $nthreads $hmmFile $iFile`), devnull)
     end
 end
 
