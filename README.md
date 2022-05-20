@@ -15,7 +15,7 @@ This package contains the implementation of `DCAlign`, a tool for aligning biolo
 - a DCA model;
 - an empirical prior modeling insertions and deletions.
 
-The learning of the model is performed has been integrated in `v1.0` (see `Usage` and the notebook in the folder `notebook`) and requires a few seconds of computation. A description of the new release is available at [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471v1).
+The learning of the model has been integrated in `v1.0` (see `Usage` and the notebook in the folder `notebook`) and requires a few seconds of computation. A description of the new release is available at [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471v1). 
 
 
 The code is written in [Julia](https://julialang.org/).
