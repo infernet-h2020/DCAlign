@@ -6,7 +6,13 @@ Anna Paola Muntoni, Andrea Pagnani, Martin Weigt and Francesco Zamponi
 
 # Description
 
-This package contains the implementation of `DCAlign`, a tool for aligning biological sequences to a DCA model of a seed, discussed in [Aligning biological sequences by exploiting residue conservation and coevolution](https://link.aps.org/doi/10.1103/PhysRevE.102.062409). `DCAlign` requires, together with the set of sequences to be aligned, a model for the seed composed of:
+This package contains the implementation of `DCAlign`, a tool for aligning biological sequences to a DCA model of a seed, discussed in [Aligning biological sequences by exploiting residue conservation and coevolution](https://link.aps.org/doi/10.1103/PhysRevE.102.062409).
+
+## New release
+A new release of the package is available in the `v1.0` branch.
+
+## First implementation
+`DCAlign` requires, together with the set of sequences to be aligned, a model for the seed composed of:
 
 - a DCA model;
 - a set of penalties for opening and extending insertions; they can be site-dependent;
@@ -18,7 +24,7 @@ For an arbitrary seed, we provide the sub-module `DCAbuild` in order to learn of
 
 The code is written in [Julia](https://julialang.org/).
 
-## Installation
+### Installation
 
 The repository `DCAlign` can be installed within the PackageManager (typing the ] key) using
 
