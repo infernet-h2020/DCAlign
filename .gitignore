@@ -7,3 +7,4 @@ notebook/.ipynb_checkpoints/
 .vscode/
 seeds/*.fasta
 seeds/*.ins
+Manifest.toml
