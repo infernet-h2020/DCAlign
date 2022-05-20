@@ -22,14 +22,30 @@ The code is written in [Julia](https://julialang.org/).
 
 ## Installation
 
-The repository `DCAlign` has not been yet registered, but it can be installed
-with the PackageManager (typing the `]` key) using
+The repository `DCAlign` has not yet been registered, but it can be installed in two ways:
 
-```(@v1.?) pkg> add https://github.com/infernet-h2020/DCAlign```
+- Within the Julia PackageManager (activate it using the `]` key), type
 
-and then typing 
+    ```(@v1.?) pkg> add https://github.com/infernet-h2020/DCAlign #v1.0```
 
-```julia> using DCAlign```
+    To use the package in the Julia terminal use
+
+    ```julia> using DCAlign```
+
+- First clone the package 
+
+    ```git clone  https://github.com/infernet-h2020/DCAlign```
+
+    and set the `v1.0` branch
+
+    ```git checkout v1.0```
+
+    Then, instantiate the package from the Julia REPL
+
+    ```julia> using Pkg; Pkg.instantiate()```
+    
+This second option allows one to easily use the explicatory notebook.
+
 
 # Usage
 
