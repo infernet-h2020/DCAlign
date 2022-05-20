@@ -15,7 +15,7 @@ This package contains the implementation of `DCAlign`, a tool for aligning biolo
 - a DCA model;
 - an empirical prior modeling insertions and deletions.
 
-The learning of the model is performed has been integrated in `v1.0` (see `Usage` and the notebook in the folder `notebook`) and requires a few seconds of computation. A description of the new release is available at LINK.
+The learning of the model is performed has been integrated in `v1.0` (see `Usage` and the notebook in the folder `notebook`) and requires a few seconds of computation. A description of the new release is available at [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471v1).
 
 
 The code is written in [Julia](https://julialang.org/).
@@ -38,7 +38,8 @@ The package uses the unregistered package `PlmDCA` that can be installed from th
 ```(v1.?) pkg> add https://github.com/pagnani/PlmDCA```
 
 
-When dealing with [Pfam](https://pfam.xfam.org/) or [Rfam](https://rfam.xfam.org/) seed alignment, `DCAlign` needs to know the positions of the insertions and deletions of the original seed. To this purpose one needs to install [HMMER v3.1b2](http://hmmer.org/) (for protein sequences) or [Infernal](http://eddylab.org/infernal/) (for RNA sequences).
+When dealing with [Pfam](https://pfam.xfam.org/) or [Rfam](https://rfam.xfam.org/) seed alignment, `DCAlign` needs to know the positions of the insertions and deletions of the original seed. To this purpose it uses the Julia JLL packages associated with [HMMER v3.1b2](http://hmmer.org/) (for protein sequences) and [Infernal](http://eddylab.org/infernal/) (for RNA sequences).
+For arbitrary seed sequences, the alignment can be performed by the Julia builder of [MAFFT-linsi](https://mafft.cbrc.jp/alignment/software/).
 
 # Usage
 
@@ -48,5 +49,5 @@ As an example, we learn a seed model for Pfam PF00035, PF00684 or Rfam RF00167 w
 
 ### Algorithm parameters
 
-The last implementation of `DCAlign` performs an annealing scheme of the update equations by increasing the value of `β` within the iterations. It stops when the approximate marginal probabilities are sufficiently concentrated. To tune the annealing scheme and the dispersion of the marginals, one can modify the increment `Δβ` (default: 0.05) performed each `Δt` (default: 10) iterations and the threshold probability `thP` (default: 0.30). See LINK for further details.
+The last implementation of `DCAlign` performs an annealing scheme of the update equations by increasing the value of `β` within the iterations. It stops when the approximate marginal probabilities are sufficiently concentrated. To tune the annealing scheme and the dispersion of the marginals, one can modify the increment `Δβ` (default: 0.05), the frequency of the annealing, performed each `Δt` (default: 10) iterations, and the threshold probability `thP` (default: 0.30). See [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471v1) for further details.
 
