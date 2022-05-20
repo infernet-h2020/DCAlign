@@ -24,7 +24,7 @@ The code is written in [Julia](https://julialang.org/).
 
 The repository `DCAlign` has not yet been registered, but it can be installed in two ways:
 
-- Within the Julia PackageManager (activate it using the `]` key), type
+1. Within the Julia PackageManager (activate it using the `]` key), type
 
     ```(@v1.?) pkg> add https://github.com/infernet-h2020/DCAlign #v1.0```
 
@@ -32,7 +32,7 @@ The repository `DCAlign` has not yet been registered, but it can be installed in
 
     ```julia> using DCAlign```
 
-- First clone the package 
+2. First clone the package 
 
     ```git clone  https://github.com/infernet-h2020/DCAlign```
 
@@ -44,7 +44,7 @@ The repository `DCAlign` has not yet been registered, but it can be installed in
 
     ```julia> using Pkg; Pkg.instantiate()```
     
-This second option allows one to easily use the explicatory notebook.
+This second option allows one to easily use the explicatory notebook. 
 
 
 # Usage
