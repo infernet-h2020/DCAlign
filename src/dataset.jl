@@ -1,21 +1,34 @@
+using DCAUtils
+# need one:
+# 1. FASTA  with full non redundant sequences
+# 2. FASTA with envelop of domain
+# return: envelopes to align
 
 function enveloptoalign(filefull; ctype::Symbol = :amino, pos::Bool = true)
     dful = readfull(filefull, ctype = ctype, pos = pos)
+    #dful = readenvelop(filefull, ctype=ctype)
     return dful
 end
 
 function enveloptoalign(filefull, fileenv, fileins; delta = 0, ctype::Symbol = :amino)
     denv = readenvelop(fileenv, ctype = ctype)
+    #println(length(denv))
+    #print(denv)
     if ctype == :amino
         dful = readfull(filefull, ctype = ctype, pos = false)
     else
         dful = readfull(filefull, ctype = ctype, pos = true)
     end
+    #println(length(dful))
     dins = readenvelop(fileins, ctype = ctype)
+    #println(length(dins))
     al = Vector{Tuple{String,String,String,String}}()
     for (name, seq) in dful
+        #println("full name ", name)
+        #println("seq: ", seq)
         l = length(seq)
         if haskey(denv, name)
+            #println("found")
             envelops = denv[name]
             envinsall = dins[name]
             for env in envelops
@@ -57,7 +70,9 @@ function readfull(filefull; ctype::Symbol = :amino, pos::Bool = true)
     for (_name, seq) in ffull
         name = String(split(_name)[1])
         while occursin('|', name)
+            #println(name)
             (aux, name) = split(name, "|", limit=2)
+            #println(name)
         end
         if occursin('/', name) && !pos
             (name, aux) = split(name, "/")
@@ -108,22 +123,21 @@ end
 function get_Z_W(filefasta::String, ctype::Symbol)
 
     seqs = readfull(filefasta, ctype = ctype)
-
+    q = (ctype == :nbase) ? 5 : 21
     L = 0
     Z = Matrix{Int64}(undef, 0, 0)
-    W = Vector{Float64}(undef, 0)
     for (i,(_, seq)) in enumerate(seqs)
         if i == 1
             L = length(seq)
-            M = length(seqs)
             Z = zeros(Int64,length(seq), length(seqs))
-            W = ones(length(seqs))./M
         end
         for j in 1:L
             Z[j,i] = letter2num(seq[j], ctype)
         end
     end
-
+    θ = compute_theta(convert(Matrix{Int8}, Z))
+    W, _ = compute_weights(convert(Matrix{Int8}, Z), q, θ)
+    W .= W ./ sum(W)
     return Z, W
 
 
