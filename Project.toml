@@ -4,6 +4,7 @@ authors = ["anna-pa-m <annapa.muntoni@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+DCAUtils = "e41cd558-3099-4f6e-a65d-5336857e40aa"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 ExtractMacro = "f86d3d12-fd5b-522c-99e9-61577282a1e9"
