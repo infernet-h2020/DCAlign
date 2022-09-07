@@ -120,7 +120,7 @@ function readunalignedseq(unseq::String, ctype::Symbol)
     return Seq("", unseq, ctype)
 end
 
-function get_Z_W(filefasta::String, ctype::Symbol)
+function get_Z_W(filefasta::String, ctype::Symbol; seed::Bool = false)
 
     seqs = readfull(filefasta, ctype = ctype)
     q = (ctype == :nbase) ? 5 : 21
@@ -135,7 +135,8 @@ function get_Z_W(filefasta::String, ctype::Symbol)
             Z[j,i] = letter2num(seq[j], ctype)
         end
     end
-    θ = compute_theta(convert(Matrix{Int8}, Z))
+
+    θ = (seed == false) ? compute_theta(convert(Matrix{Int8}, Z)) : 0.0
     W, _ = compute_weights(convert(Matrix{Int8}, Z), q, θ)
     W .= W ./ sum(W)
     return Z, W
