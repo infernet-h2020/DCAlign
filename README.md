@@ -124,5 +124,5 @@ DCAlign.align_all(21, 87, "../test/PF00677/Parameters_bm_PF00677seed_potts.dat",
 
 ```
 ## Acknowledgments
-Andrea Pagnaniacknowledges financial support by FAIR (Future Artificial Intelligence Research) and ICSC (Centro Nazionale di Ricerca in High-Performance Computing, Big Data, and Quantum Computing) founded by European Union. 
+Andrea Pagnani acknowledges financial support by FAIR (Future Artificial Intelligence Research) and ICSC (Centro Nazionale di Ricerca in High-Performance Computing, Big Data, and Quantum Computing) founded by European Union. 
 
