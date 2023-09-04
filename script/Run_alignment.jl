@@ -32,9 +32,9 @@ h = PlmOut.htensor;
 
 # %%
 delta = 30;
-al = DCAlign.enveloptoalign("../test/" * fam * "/" * fam * "_full_length_sequences.fasta",
-                            "../test/" * fam * "/" * fam * "_full.fasta", 
-                            "../test/" * fam * "/" * fam * "_full.ins" ,
+al = DCAlign.enveloptoalign("../families/" * fam * "/" * fam * "_full_length_sequences.fasta",
+                            "../families/" * fam * "/" * fam * "_full.fasta", 
+                            "../families/" * fam * "/" * fam * "_full.ins" ,
                             delta = delta, ctype = ctype
                             )
 M = length(al)
