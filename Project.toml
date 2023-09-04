@@ -1,7 +1,7 @@
 name = "DCAlign"
 uuid = "7c56534c-5b99-4296-b987-268203c2478b"
 authors = ["anna-pa-m <annapa.muntoni@gmail.com>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 DCAUtils = "e41cd558-3099-4f6e-a65d-5336857e40aa"
