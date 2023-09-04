@@ -61,7 +61,7 @@ As an example, we learn a seed model for Pfam PF00035, PF00684 or Rfam RF00167 w
 
 ### Algorithm parameters
 
-The last implementation of `DCAlign` performs an annealing scheme of the update equations by increasing the value of `β` within the iterations. It stops when the approximate marginal probabilities are sufficiently concentrated. To tune the annealing scheme and the dispersion of the marginals, one can modify the increment `Δβ` (default: 0.05), the frequency of the annealing, performed each `Δt` (default: 10) iterations, and the threshold probability `thP` (default: 0.30). See [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471v1) for further details.
+The last implementation of `DCAlign` performs an annealing scheme of the update equations by increasing the value of `β` within the iterations. It stops when the approximate marginal probabilities are sufficiently concentrated. To tune the annealing scheme and the dispersion of the marginals, one can modify the increment `Δβ` (default: 0.05), the frequency of the annealing, performed each `Δt` (default: 10) iterations, and the threshold probability `thP` (default: 0.30). See [bioRxiv](https://biorxiv.org/cgi/content/short/2022.05.18.492471) for further details.
 
 ### Limitations
 
