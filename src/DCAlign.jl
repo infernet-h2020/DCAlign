@@ -2,18 +2,23 @@ module DCAlign
 using FastaIO
 using Printf, Random, Logging, Distributed, DelimitedFiles
 using ExtractMacro, OffsetArrays
-export Seq, palign
+using StatsBase, LinearAlgebra, Statistics
+import HMMER_jll, Infernal_jll
+
+export Seq, palign, AllVar, align_seed_mafft, align_seed_pfam, align_seed_rfam, hmmbuild
 
 import Base.show
-
-
+### All and Back-forw algorithm
 include("types.jl")     # general types (all marginals and BP/MS msg)
 include("iterate_bplc.jl")   # BPlc algoritm at chosen temperature
 include("utils.jl")     # utilities
 include("palign_bplc.jl")    # the main alignment function (BPlc at chosen temperature)
 include("dataset.jl")   # read full length seqs or generate them
-include("iterate_bplc0.jl") # BPlc update at zero temperature
+### Seed utils
+include("fasta_utils.jl")
+include("seed_utils.jl")
+include("insertions.jl") # insertions prior
+### Nucleation 
 include("decimation.jl") # all decimation routines
-include("align_all.jl") # align a set of sequences
 
 end #end module

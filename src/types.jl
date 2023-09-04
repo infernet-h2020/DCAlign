@@ -1,3 +1,20 @@
+const Marginal = OffsetArrays.OffsetArray{Float64, 2, Array{Float64,2}}
+Marginal(N::Int) = OffsetArray(rand(2,N+2), 0:1, 0:N+1)
+
+# We adopt the following convention:
+# xᵢ = 1 → match,
+# xᵢ = 0 → gap,
+# nᵢ = 0 if xᵢ = 0 and no match has been yet found
+# N + 1 > nᵢ > 0, xᵢ = 1 for all the matched cases
+# N + 1 > nᵢ > 0, xᵢ = 0 for all the internal gaps
+# nᵢ = N + 1 if xᵢ = 0 for last gaps
+
+struct Data
+    J::Array{Float64,4}
+    h::Array{Float64,2}
+    Λ::OffsetArray{Float64,3,Array{Float64,3}}
+end
+
 struct Output
     seq::String
     seqins::String
@@ -10,15 +27,36 @@ end
 mutable struct Alg
     verbose::Bool #verbosity of output
     maxiter::Int  # maximal number of sweeps
-    epsconv::Float64 # tolerance for the convergence of T > 0 alg
-    mindec::Int # convergence for T = 0 alg, assignment must be consecutively repeated for at least mindec times
     damp::Float64  # damping factor: Pnew = damp*Pold + (1-damp)*Pnew
-    μext::Float64 # gap external penalty    exp[-μext], nᵢ ∈ {N+1, 0}, xᵢ = 0
-    λo::Vector{Float64} # penalty for opening exp[-λo]I(Δn > 0)
-    λe::Vector{Float64} # penalty for extending exp[-λe(Δn - 1)I(Δn >0)]
-    μint::Float64 #gap internal penalty exp[-μint], N ≥ n ≥ 1, xᵢ = 0
+    Λ::OffsetArray{Float64,3, Array{Float64,3}} #all insertions penalties (short and long range)
     nprint::Int # print info every nprint iterations
+    thP::Float64
+    Δβ::Float64
+    Δt::Int64
+    μint::Float64
+    μext::Float64
+    function Alg(verb::Bool, maxit::Int,  damp::Float64, Λ::OffsetArray{Float64,3, Array{Float64,3}}, 
+                nprint::Int, N::Int, L::Int, pcount::Float64; 
+                thP::Float64 = 0.3, Δβ::Float64 = 0.01, μint::Float64=0.0, μext::Float64=0.0, Δt::Int64=10)
+
+            Nseed = length(view(Λ,1,2,:))
+            Λnew = OffsetArray(fill(0.0, (L,L,N+2)), 1:L, 1:L, 0:N+1)
+
+            for i = 1:L, j in 1:L
+                for n in 0:N+1
+                    if n < Nseed
+                        Λnew[i,j,n] = (1.0 - pcount) * Λ[i,j,n] + pcount + 1e-4 * rand()
+                    else
+                        Λnew[i,j,n] = pcount + 1e-4 * rand() #pseudocount and small noise
+                    end
+                end
+                Λnew[i,j,:] .= Λnew[i,j,:] ./ sum(view(Λnew,i,j,:))
+            end
+            return new(verb::Bool, maxit::Int, damp::Float64, Λnew::OffsetArray{Float64,3, Array{Float64,3}}, 
+                nprint::Int, thP::Float64, Δβ::Float64, Δt::Int64, μint::Float64, μext::Float64)
+    end
 end
+
 
 
 struct Seq
@@ -74,17 +112,6 @@ struct Jh
     end
 end
 
-const Marginal = OffsetArrays.OffsetArray{Float64, 2, Array{Float64,2}}
-Marginal(N::Int) = OffsetArray(rand(2,N+2), 0:1, 0:N+1)
-
-# We adopt the following convention:
-# xᵢ = 1 → match,
-# xᵢ = 0 → gap,
-# nᵢ = 0 if xᵢ = 0 and no match has been yet found
-# N + 1 > nᵢ > 0, xᵢ = 1 for all the matched cases
-# N + 1 > nᵢ > 0, xᵢ = 0 for all the internal gaps
-# nᵢ = N + 1 if xᵢ = 0 for last gaps
-
 struct PBF
     L::Int # Potts-model length
     N::Int # Sequence-to-align length
@@ -133,6 +160,7 @@ struct AllVar
     jh::Jh   # coupling
     seq::Seq # sequence to align
     alg::Alg # algorithm parameters.
+    data::Data # Original J, h, and Λ
 end
 
 

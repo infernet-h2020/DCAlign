@@ -63,7 +63,7 @@ function constrain_neigh_minus!(prob, uni, N, xsol, nsol, T0::Bool)
 	return M
 end
 
-function decimate_post(allvar::DCAlign.AllVar, T0::Bool)
+function decimate_post(allvar::AllVar, T0::Bool)
 
 	@extract allvar : seq pbf jh alg
 	@extract pbf : P L q N
@@ -162,4 +162,55 @@ function decimate_post(allvar::DCAlign.AllVar, T0::Bool)
 
 end
 
+function constrain_neigh_plus0!(prob, uni, N, xsol, nsol)
+	M = prob;
+	M .= M .+ uni
+	if xsol == 1
+		for n in 0:N+1
+			M[0,n] = (n == nsol || n == N + 1) ? M[0,n]  : -Inf
+			M[1,n] = (n > nsol) ? M[1,n] : -Inf
+		end
+	else
+		for n in 0:N+1
+			M[0,n] = (n == nsol) ? M[0,n]  : -Inf
+			M[1,n] = (n > nsol) ? M[1,n] : -Inf
+		end
+	end
+	M[1,0] = -Inf
+	M[1,N+1] = -Inf
+	M .= M .- maximum(M);
+	return M
+end
 
+function constrain_neigh_minus0!(prob, uni, N, xsol, nsol)
+	M = prob;
+	M .= M .+ uni
+	if xsol == 0
+	    if nsol == 0
+	       for n = 1:N+1
+		  M[0,n] = -Inf
+	       end
+	       for n = 0:N+1
+		  M[1,n] = -Inf
+	       end
+	    elseif nsol == N + 1
+	       for n = 0:N
+		  M[0,n] = -Inf
+	       end
+	    else
+	        M[0,0] = -Inf
+		M[0, N+1] = -Inf
+		for x in 0:1, n in 1:N
+		     M[x,n] = (n == nsol) ? M[x,n] : -Inf
+		end
+	    end
+	else
+		for x in 0:1, n in 0:N+1
+		     M[x,n] = (n < nsol) ? M[x,n]  : -Inf
+		end
+	end
+	M[1,0] = -Inf
+	M[1,N+1] = -Inf
+	M .= M .- maximum(M)
+	return M
+end
