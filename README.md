@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/269696171.svg)](https://zenodo.org/badge/latestdoi/269696171)
+
 # DCAlign: Aligning biological sequences using Direct Coupling Analysis models
 
 # Authors
