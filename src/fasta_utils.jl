@@ -367,3 +367,75 @@ end
 function hmmalign(hmmFile::String,iFile::String, oFile::String)
     run(pipeline(`$(HMMER_jll.hmmalign()) -o $oFile $hmmFile $iFile`, devnull))
 end
+
+function remap_by_rf(seq::String, rf::String)::String
+    length(seq) != length(rf) && throw(ArgumentError("seq length $(length(seq)) != RF length $(length(rf))"))
+
+    out = Char[]
+    for (c, r) in zip(seq, rf)
+        if r == 'x'
+            if c in ['.', '~', '-']
+                push!(out, '-')
+            elseif islowercase(c)
+                push!(out, uppercase(c))
+            elseif isuppercase(c)
+                push!(out, c)
+            else
+                throw(ArgumentError("c=$c"))
+            end
+        elseif r == '.'
+            if c in ['-', '~', '.']
+                continue
+            elseif isuppercase(c)
+                push!(out, lowercase(c))
+            elseif islowercase(c)
+                push!(out, c)
+            else
+                throw(ArgumentError("c=$c"))
+            end
+        else
+            throw(ArgumentError("r=$r"))
+        end
+    end
+    return String(out)
+end
+
+
+function read_hmmbuild_output(path::String)::Tuple{String, OrderedDict{String, String}}
+    rf_parts = String[]
+    frags = OrderedDict{String, Vector{String}}()
+
+    open(path, "r") do f
+        for line in eachline(f)
+            isempty(line) && continue
+
+            if startswith(line, "#=GC RF")
+                push!(rf_parts, split(line)[end])
+                continue
+            end
+
+            startswith(line, "#") && continue
+            line == "//" && continue
+
+            parts = split(line)
+            length(parts) < 2 && continue
+
+            name, frag = parts[1], parts[2]
+            push!(get!(frags, name, String[]), frag)
+        end
+    end
+
+    rf = join(rf_parts)
+    seqs = OrderedDict(k => join(v) for (k, v) in frags)
+    return rf, seqs
+end
+
+
+function hmmbuild_output_to_a3m(input::String, output::String)
+    rf, seqs = read_hmmbuild_output(input)
+    open(output, "w") do f
+        for (name, seq) in seqs
+            write(f, ">$name\n$(remap_by_rf(seq, rf))\n")
+        end
+    end
+end

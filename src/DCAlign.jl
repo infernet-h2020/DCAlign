@@ -4,6 +4,7 @@ using Printf, Random, Logging, Distributed, DelimitedFiles
 using ExtractMacro, OffsetArrays
 using StatsBase, LinearAlgebra, Statistics
 import HMMER_jll, Infernal_jll
+using OrderedCollections
 
 export Seq, palign, AllVar, align_seed_mafft, align_seed_pfam, align_seed_rfam, hmmbuild
 

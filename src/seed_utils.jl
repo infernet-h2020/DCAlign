@@ -116,9 +116,7 @@ function align_seed_pfam(fseqs::String, fou::String; nthreads::Integer = 1, extr
         @info "### Computing the HMM and get aligned seed (with and without insertions)"
         hmmbuild(fseqs, joinpath(tmpdir, "tmp_stk.out"), joinpath(tmpdir, "tmp_stk.hmm"), nthreads = nthreads, extra = extra)
         file_tmp_stk = joinpath(tmpdir, "tmp_stk.out")
-        d = read_stockholm(file_tmp_stk)
-        #tmp, g = extract_align(d)
-        writefasta(joinpath(tmpdir, "tmp.fasta"), d)
+		hmmbuild_output_to_a3m(file_tmp_stk, joinpath(tmpdir, "tmp.fasta"))
         clean_ins = extract_ins(joinpath(tmpdir, "tmp.fasta"))
         clean_fasta, L = extract_align(clean_ins)
         writefasta(fou * ".ins", clean_ins)
@@ -128,6 +126,7 @@ function align_seed_pfam(fseqs::String, fou::String; nthreads::Integer = 1, extr
     end
     return L
 end
+
 
 function align_seed_rfam(fseqs::String, fou::String; nthreads::Integer = 1, extra::String = "")
     L = 0
