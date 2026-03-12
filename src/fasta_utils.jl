@@ -232,6 +232,7 @@ Read stokholm formatted `iFile` and return a `Dict{String,String}` of the alignm
 function read_stockholm(iFile::String)
 
     fasta_dict = Dict{String,String}()
+    neglect_seq = []
     header_order = String[]
     nglect = 0
     open(iFile) do iFid
@@ -241,16 +242,24 @@ function read_stockholm(iFile::String)
             line[1] == '#' && continue
             line == "//" && continue
             header, seq = split(line)
-	    #seq = replace(seq0, "~" => "-") # replace ~ with - WRONG LENGTH (OFTEN)
-	    if contains(seq, "~") 
-		    nglect += 1
-		    continue
-	    end
+	        #seq = replace(seq0, "~" => "-") # replace ~ with - WRONG LENGTH (OFTEN)
+	        if contains(seq, "~") 
+                push!(neglect_seq, header)
+		        nglect += 1
+	        end
             if haskey(fasta_dict, header)
-                fasta_dict[header] = string(fasta_dict[header], seq)
+                if header in neglect_seq
+                    delete!(fasta_dict, header)
+                else
+                    fasta_dict[header] = string(fasta_dict[header], seq)
+                end
             else
-                fasta_dict[header] = seq
-                push!(header_order, header)
+                if header in neglect_seq
+                    continue
+                else
+                    fasta_dict[header] = seq
+                    push!(header_order, header)
+                end
             end
         end
     end
