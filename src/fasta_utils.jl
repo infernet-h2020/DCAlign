@@ -233,6 +233,38 @@ function read_stockholm(iFile::String)
 
     fasta_dict = Dict{String,String}()
     header_order = String[]
+    nglect = 0
+    open(iFile) do iFid
+        for line in eachline(iFid)
+            line = chomp(line)
+            line == "" && continue
+            line[1] == '#' && continue
+            line == "//" && continue
+            header, seq = split(line)
+	    #seq = replace(seq0, "~" => "-") # replace ~ with - WRONG LENGTH (OFTEN)
+	    if contains(seq, "~") 
+		    nglect += 1
+		    continue
+	    end
+            if haskey(fasta_dict, header)
+                fasta_dict[header] = string(fasta_dict[header], seq)
+            else
+                fasta_dict[header] = seq
+                push!(header_order, header)
+            end
+        end
+    end
+    if nglect > 0
+	    @warn "$nglect sequences contain ~ and have been discarded"
+    end
+    fasta_dict
+end
+
+#=
+function read_stockholm(iFile::String)
+
+    fasta_dict = Dict{String,String}()
+    header_order = String[]
     open(iFile) do iFid
         for line in eachline(iFid)
             line = chomp(line)
@@ -250,7 +282,7 @@ function read_stockholm(iFile::String)
     end
     fasta_dict
 end
-
+=#
 
 function extract_ins(iFile::String)
 
